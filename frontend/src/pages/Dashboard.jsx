@@ -113,8 +113,8 @@ export default function Dashboard() {
               {fmtPct(data.total_gain_pct)} YTD
             </div>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64 min-h-[240px]">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
               <LineChart data={data.performance}>
                 <defs>
                   <linearGradient id="line-grad" x1="0" y1="0" x2="1" y2="0">
@@ -124,7 +124,7 @@ export default function Dashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="month" stroke="#4B5563" fontSize={12} />
-                <YAxis stroke="#4B5563" fontSize={12} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                <YAxis stroke="#4B5563" fontSize={12} tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
                   contentStyle={{
                     background: "#fff",
@@ -150,8 +150,8 @@ export default function Dashboard() {
         <div className="bg-white border border-[var(--border)] rounded-xl p-6" data-testid="allocation-chart-card">
           <div className="text-xs tracking-[0.15em] uppercase text-[var(--text-secondary)]">Allocation</div>
           <h3 className="font-display font-bold text-xl text-[var(--primary)] mb-4">By asset class</h3>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-56 min-h-[200px]">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
               <PieChart>
                 <Pie
                   data={data.allocation}

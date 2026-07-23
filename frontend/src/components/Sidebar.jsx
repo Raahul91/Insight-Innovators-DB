@@ -20,7 +20,7 @@ export const Sidebar = () => {
         <div>
           <div className="font-display font-black text-lg leading-none text-[var(--primary)]">MERIDIAN</div>
           <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--text-secondary)] mt-1">
-            Wealth OS
+            EU Wealth OS
           </div>
         </div>
       </div>

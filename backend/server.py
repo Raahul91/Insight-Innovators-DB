@@ -91,37 +91,41 @@ class ChatRequest(BaseModel):
 
 # ---------- Static/mock data ----------
 PORTFOLIO_HOLDINGS = [
-    Holding(ticker="AAPL", name="Apple Inc.", category="Stocks", shares=45, avg_cost=142.50, current_price=189.32, day_change_pct=1.24),
-    Holding(ticker="MSFT", name="Microsoft Corp.", category="Stocks", shares=30, avg_cost=280.00, current_price=412.18, day_change_pct=-0.42),
-    Holding(ticker="VOO", name="Vanguard S&P 500 ETF", category="ETFs", shares=25, avg_cost=380.00, current_price=468.90, day_change_pct=0.68),
-    Holding(ticker="VTSAX", name="Vanguard Total Stock Market", category="Mutual Funds", shares=120, avg_cost=95.20, current_price=118.45, day_change_pct=0.55),
-    Holding(ticker="BND", name="Vanguard Total Bond Market", category="Bonds", shares=200, avg_cost=76.10, current_price=73.28, day_change_pct=-0.11),
-    Holding(ticker="BTC", name="Bitcoin", category="Crypto", shares=0.35, avg_cost=32000.00, current_price=64850.00, day_change_pct=2.85),
-    Holding(ticker="ETH", name="Ethereum", category="Crypto", shares=2.5, avg_cost=1850.00, current_price=3420.00, day_change_pct=1.92),
+    Holding(ticker="ASML.AS", name="ASML Holding N.V.", category="Stocks", shares=18, avg_cost=620.00, current_price=892.40, day_change_pct=1.42),
+    Holding(ticker="MC.PA", name="LVMH Moët Hennessy Louis Vuitton", category="Stocks", shares=12, avg_cost=680.00, current_price=742.30, day_change_pct=-0.35),
+    Holding(ticker="SAP.DE", name="SAP SE", category="Stocks", shares=40, avg_cost=112.00, current_price=178.60, day_change_pct=0.68),
+    Holding(ticker="VWCE.DE", name="Vanguard FTSE All-World UCITS ETF", category="ETFs", shares=85, avg_cost=98.20, current_price=124.85, day_change_pct=0.52),
+    Holding(ticker="IMEU.L", name="iShares Core MSCI Europe UCITS ETF", category="ETFs", shares=120, avg_cost=56.40, current_price=68.72, day_change_pct=0.44),
+    Holding(ticker="IE00B4L5Y983", name="iShares Core MSCI World UCITS Fund", category="Mutual Funds", shares=95, avg_cost=68.10, current_price=89.35, day_change_pct=0.61),
+    Holding(ticker="EUNH.DE", name="iShares Euro Government Bond 7-10y UCITS", category="Bonds", shares=180, avg_cost=142.50, current_price=138.20, day_change_pct=-0.14),
+    Holding(ticker="BTC", name="Bitcoin", category="Crypto", shares=0.28, avg_cost=28500.00, current_price=59200.00, day_change_pct=2.65),
+    Holding(ticker="ETH", name="Ethereum", category="Crypto", shares=2.1, avg_cost=1620.00, current_price=3120.00, day_change_pct=1.78),
 ]
 
 PRODUCTS: List[Product] = [
-    # Stocks
-    Product(id="p1", ticker="NVDA", name="NVIDIA Corporation", category="Stocks", price=902.50, ytd_return=78.4, one_year_return=185.2, risk="High", description="Leading GPU manufacturer powering the AI revolution."),
-    Product(id="p2", ticker="GOOGL", name="Alphabet Inc.", category="Stocks", price=175.30, ytd_return=22.1, one_year_return=48.6, risk="Medium", description="Global technology leader in search, cloud, and AI."),
-    Product(id="p3", ticker="TSLA", name="Tesla Inc.", category="Stocks", price=245.80, ytd_return=-5.2, one_year_return=15.3, risk="High", description="EV and clean energy pioneer with autonomous ambitions."),
-    Product(id="p4", ticker="JPM", name="JPMorgan Chase", category="Stocks", price=195.40, ytd_return=14.8, one_year_return=32.5, risk="Medium", description="Largest US bank by assets with diversified operations."),
-    # Mutual Funds
-    Product(id="p5", ticker="VTSAX", name="Vanguard Total Stock Market", category="Mutual Funds", price=118.45, ytd_return=11.2, one_year_return=24.8, risk="Medium", expense_ratio=0.04, description="Broad exposure to entire US equity market."),
-    Product(id="p6", ticker="FXAIX", name="Fidelity 500 Index Fund", category="Mutual Funds", price=196.20, ytd_return=10.8, one_year_return=23.4, risk="Medium", expense_ratio=0.015, description="Tracks S&P 500 with ultra-low expense ratio."),
-    Product(id="p7", ticker="VBTLX", name="Vanguard Total Bond Market", category="Mutual Funds", price=9.85, ytd_return=1.4, one_year_return=3.2, risk="Low", expense_ratio=0.05, description="Diversified US bond exposure for income."),
-    # ETFs
-    Product(id="p8", ticker="VOO", name="Vanguard S&P 500 ETF", category="ETFs", price=468.90, ytd_return=10.9, one_year_return=23.7, risk="Medium", expense_ratio=0.03, description="Tracks the S&P 500 index with rock-bottom fees."),
-    Product(id="p9", ticker="QQQ", name="Invesco QQQ Trust", category="ETFs", price=445.60, ytd_return=15.2, one_year_return=32.1, risk="High", expense_ratio=0.20, description="Tracks Nasdaq-100, tech-heavy growth exposure."),
-    Product(id="p10", ticker="SCHD", name="Schwab US Dividend Equity", category="ETFs", price=78.90, ytd_return=6.4, one_year_return=14.2, risk="Low", expense_ratio=0.06, description="Focus on high-quality US dividend paying stocks."),
-    # Bonds
-    Product(id="p11", ticker="AGG", name="iShares Core US Aggregate Bond", category="Bonds", price=98.40, ytd_return=1.8, one_year_return=3.6, risk="Low", expense_ratio=0.03, description="Broad US investment-grade bond exposure."),
-    Product(id="p12", ticker="TLT", name="20+ Year Treasury Bond ETF", category="Bonds", price=94.20, ytd_return=-2.1, one_year_return=1.4, risk="Medium", expense_ratio=0.15, description="Long-duration US Treasury bonds, rate sensitive."),
-    Product(id="p13", ticker="MUB", name="iShares National Muni Bond", category="Bonds", price=106.80, ytd_return=1.2, one_year_return=2.8, risk="Low", expense_ratio=0.05, description="Tax-exempt municipal bond exposure."),
+    # Stocks (European blue chips)
+    Product(id="p1", ticker="ASML.AS", name="ASML Holding N.V.", category="Stocks", price=892.40, ytd_return=42.6, one_year_return=68.2, risk="High", description="Dutch semiconductor lithography leader; monopoly on EUV machines."),
+    Product(id="p2", ticker="MC.PA", name="LVMH (Moët Hennessy Louis Vuitton)", category="Stocks", price=742.30, ytd_return=8.4, one_year_return=15.8, risk="Medium", description="Paris-listed global luxury conglomerate — 75+ Maisons."),
+    Product(id="p3", ticker="SAP.DE", name="SAP SE", category="Stocks", price=178.60, ytd_return=24.8, one_year_return=48.6, risk="Medium", description="German enterprise software leader in ERP and cloud."),
+    Product(id="p4", ticker="NOVO-B.CO", name="Novo Nordisk A/S", category="Stocks", price=112.80, ytd_return=18.5, one_year_return=42.1, risk="Medium", description="Danish pharma leader in diabetes and obesity treatments (Ozempic, Wegovy)."),
+    Product(id="p5", ticker="NESN.SW", name="Nestlé S.A.", category="Stocks", price=94.30, ytd_return=-2.1, one_year_return=4.5, risk="Low", description="Swiss consumer staples giant, defensive dividend payer."),
+    # Mutual Funds (UCITS)
+    Product(id="p6", ticker="IE00B4L5Y983", name="iShares Core MSCI World UCITS", category="Mutual Funds", price=89.35, ytd_return=11.2, one_year_return=22.4, risk="Medium", expense_ratio=0.20, description="Diversified developed-market equity exposure. UCITS-compliant."),
+    Product(id="p7", ticker="LU0274208692", name="Xtrackers MSCI Europe UCITS", category="Mutual Funds", price=78.20, ytd_return=8.6, one_year_return=14.8, risk="Medium", expense_ratio=0.12, description="Broad European large- and mid-cap equity exposure."),
+    Product(id="p8", ticker="IE00B4WXJJ64", name="iShares Euro Aggregate Bond UCITS", category="Mutual Funds", price=104.80, ytd_return=1.6, one_year_return=3.8, risk="Low", expense_ratio=0.09, description="Investment-grade euro-denominated bonds across the eurozone."),
+    # ETFs (UCITS)
+    Product(id="p9", ticker="VWCE.DE", name="Vanguard FTSE All-World UCITS ETF", category="ETFs", price=124.85, ytd_return=10.4, one_year_return=22.8, risk="Medium", expense_ratio=0.22, description="Global equity ETF (developed + emerging), EUR-hedged available."),
+    Product(id="p10", ticker="EUNL.DE", name="iShares Core MSCI World UCITS ETF", category="ETFs", price=92.40, ytd_return=11.1, one_year_return=23.4, risk="Medium", expense_ratio=0.20, description="Popular UCITS world equity ETF among European investors."),
+    Product(id="p11", ticker="SXR8.DE", name="iShares Core S&P 500 UCITS ETF", category="ETFs", price=548.60, ytd_return=12.8, one_year_return=25.6, risk="Medium", expense_ratio=0.07, description="EU-domiciled S&P 500 tracker (Ireland UCITS)."),
+    Product(id="p12", ticker="EXS1.DE", name="iShares Core DAX UCITS ETF", category="ETFs", price=178.20, ytd_return=9.4, one_year_return=18.2, risk="Medium", expense_ratio=0.16, description="Tracks the DAX 40 — largest listed German companies."),
+    # Bonds (European sovereigns & corporates)
+    Product(id="p13", ticker="EUNH.DE", name="iShares Euro Gov Bond 7-10y UCITS", category="Bonds", price=138.20, ytd_return=1.4, one_year_return=3.2, risk="Low", expense_ratio=0.15, description="Diversified eurozone government bonds, 7-10 year maturities."),
+    Product(id="p14", ticker="IBGL.L", name="iShares German Bund 25+ UCITS", category="Bonds", price=82.40, ytd_return=-1.8, one_year_return=0.6, risk="Medium", expense_ratio=0.15, description="Long-duration German Bunds — flagship EU safe-haven asset."),
+    Product(id="p15", ticker="IEAC.L", name="iShares Euro Corporate Bond UCITS", category="Bonds", price=124.60, ytd_return=1.2, one_year_return=3.4, risk="Low", expense_ratio=0.20, description="Investment-grade euro-denominated corporate bonds."),
     # Crypto
-    Product(id="p14", ticker="BTC", name="Bitcoin", category="Crypto", price=64850.00, ytd_return=52.3, one_year_return=142.5, risk="High", description="Original decentralized digital currency."),
-    Product(id="p15", ticker="ETH", name="Ethereum", category="Crypto", price=3420.00, ytd_return=48.6, one_year_return=98.4, risk="High", description="Smart contract platform powering Web3."),
-    Product(id="p16", ticker="SOL", name="Solana", category="Crypto", price=168.40, ytd_return=68.2, one_year_return=215.6, risk="High", description="High-throughput blockchain for DeFi and apps."),
+    Product(id="p16", ticker="BTC", name="Bitcoin", category="Crypto", price=59200.00, ytd_return=48.2, one_year_return=136.4, risk="High", description="Original decentralised digital currency. MiCA-regulated in EU."),
+    Product(id="p17", ticker="ETH", name="Ethereum", category="Crypto", price=3120.00, ytd_return=44.6, one_year_return=92.8, risk="High", description="Smart-contract platform powering Web3 apps."),
+    Product(id="p18", ticker="SOL", name="Solana", category="Crypto", price=152.80, ytd_return=62.4, one_year_return=198.6, risk="High", description="High-throughput blockchain for DeFi and consumer apps."),
 ]
 
 QUESTIONS = [
@@ -287,8 +291,9 @@ async def submit_questionnaire(sub: QuestionnaireSubmission):
 @api_router.post("/chat/stream")
 async def chat_stream(req: ChatRequest):
     system_msg = (
-        "You are Aria, a friendly, expert AI investment advisor for a light-professional portfolio app. "
+        "You are Aria, a friendly, expert AI investment advisor for European retail investors on a light-professional portfolio app. "
         "Give concise, clear guidance in 2-4 sentences. Never guarantee returns. "
+        "Use EUR (€) for all monetary figures. Assume UCITS ETFs, MiFID II framework, and EU-domiciled products. "
         "When discussing the user's portfolio, use the context provided. "
         "Be conversational since your response may be spoken aloud."
     )

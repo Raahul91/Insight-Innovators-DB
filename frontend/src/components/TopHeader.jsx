@@ -8,7 +8,7 @@ export const TopHeader = ({ title, subtitle }) => {
     >
       <div>
         <div className="text-[11px] tracking-[0.2em] uppercase text-[var(--text-secondary)]">
-          {subtitle}
+          {subtitle} · EUR
         </div>
         <h1 className="font-display font-black text-2xl md:text-3xl text-[var(--primary)]" data-testid="page-title">
           {title}
@@ -19,7 +19,7 @@ export const TopHeader = ({ title, subtitle }) => {
           <Search size={16} />
           <input
             data-testid="header-search"
-            placeholder="Search assets, funds…"
+            placeholder="Search UCITS ETFs, stocks…"
             className="bg-transparent outline-none flex-1 text-[var(--text-primary)]"
           />
         </div>
