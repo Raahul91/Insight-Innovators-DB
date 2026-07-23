@@ -161,6 +161,62 @@ body {
   pointer-events: none;
   transform-origin: 50% 50%;
 }
+
+/* Hands — positioned to look like they emerge from the blazer */
+.era-hand {
+  position: absolute;
+  z-index: 3;
+  width: 22%;
+  height: 22%;
+  filter: drop-shadow(0 6px 10px rgba(10, 37, 64, 0.22));
+  transform-origin: 50% 5%;
+  transition: transform 0.35s ease;
+}
+.era-hand-left {
+  bottom: 12%;
+  left: 8%;
+  transform: rotate(-20deg) translateY(4%);
+}
+.era-hand-right {
+  bottom: 12%;
+  right: 8%;
+  transform: rotate(20deg) translateY(4%);
+}
+
+/* Idle: subtle sway on hands */
+.era-character .era-hand-left  { animation: era-hand-left-idle  6s ease-in-out infinite; }
+.era-character .era-hand-right { animation: era-hand-right-idle 6.3s ease-in-out infinite; }
+@keyframes era-hand-left-idle {
+  0%, 100% { transform: rotate(-20deg) translateY(4%); }
+  50%      { transform: rotate(-16deg) translateY(2%); }
+}
+@keyframes era-hand-right-idle {
+  0%, 100% { transform: rotate(20deg) translateY(4%); }
+  50%      { transform: rotate(16deg) translateY(2%); }
+}
+
+/* Speaking: expressive gestures. Left hand does a "lift & wave", right hand
+   does a "present" / open-palm outward — offset timing so they look natural */
+.era-character[data-speaking="true"] .era-hand-left {
+  animation: era-hand-left-talk 2.4s ease-in-out infinite;
+}
+.era-character[data-speaking="true"] .era-hand-right {
+  animation: era-hand-right-talk 2.6s ease-in-out infinite;
+}
+@keyframes era-hand-left-talk {
+  0%   { transform: rotate(-20deg) translate(0, 4%); }
+  25%  { transform: rotate(-45deg) translate(-6%, -14%); }
+  50%  { transform: rotate(-15deg) translate(-2%, -22%); }
+  75%  { transform: rotate(-38deg) translate(-6%, -10%); }
+  100% { transform: rotate(-20deg) translate(0, 4%); }
+}
+@keyframes era-hand-right-talk {
+  0%   { transform: rotate(20deg)  translate(0, 4%); }
+  20%  { transform: rotate(48deg)  translate(6%, -12%); }
+  45%  { transform: rotate(28deg)  translate(10%, -22%) scale(1.08); }
+  70%  { transform: rotate(52deg)  translate(4%, -14%); }
+  100% { transform: rotate(20deg)  translate(0, 4%); }
+}
 .era-character[data-listening="true"] .era-listen-svg {
   opacity: 1;
   animation: era-listen-rotate 4s linear infinite;
