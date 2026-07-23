@@ -112,7 +112,9 @@ export const ERAPanel = () => {
           <div className="flex items-center justify-center gap-3">
             <h2 className="font-display font-black text-2xl text-[var(--primary)]">ERA</h2>
             <span
-              className={`era-waves text-[var(--accent)] ${speaking ? "active" : ""}`}
+              className={`era-waves ${listening ? "text-[var(--danger)] listening" : "text-[var(--accent)]"} ${
+                speaking || listening ? "active" : ""
+              }`}
               aria-hidden
             >
               <span /><span /><span /><span /><span />

@@ -20,6 +20,11 @@ export const ERAAvatar = ({ size = 440, speaking = false, listening = false, cla
       <svg className="era-listen-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden>
         <circle cx="50" cy="50" r="46" fill="none" stroke="#FF3B30" strokeWidth="1.4" strokeDasharray="3 5" />
       </svg>
+      <div className="era-listening-waves" aria-hidden>
+        <span />
+        <span />
+        <span />
+      </div>
       <div className="era-character-figure">
         <img
           src={eraIdle}

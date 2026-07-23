@@ -67,6 +67,9 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
   const activeRequestRef = useRef(null);
   const speakRef = useRef(null);
   const pendingActionRef = useRef(null);
+  const queuedInputRef = useRef(null);
+  const sendMessageRef = useRef(null);
+  const confirmPendingActionRef = useRef(null);
   const streamingRef = useRef(false);
   const previousPathRef = useRef(location.pathname);
   const sessionId = useRef(getSessionId()).current;
@@ -121,14 +124,24 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
     const normalized = text
       .toLowerCase()
       .trim()
-      .replace(/[.,!?]/g, "")
+      .replace(/[’']/g, "'")
+      .replace(/[.,!?;:]/g, "")
       .replace(/\s+/g, " ");
-    if (normalized === "yes") return true;
     if (/\b(no|not|don't|do not|wait|stop)\b/i.test(normalized)) return false;
+    // When an option is already pending, natural follow-on wording after an
+    // affirmative is still confirmation: "yeah ok", "yes do that selection",
+    // "okay please continue", etc.
+    if (
+      /^(yes|yeah|yep|yup|ok|okay|sure|correct|absolutely|affirmative|certainly|confirm|confirmed|proceed)\b/i.test(
+        normalized,
+      )
+    ) {
+      return true;
+    }
     return (
-      /^(yes|yeah|yep|sure|okay|ok|correct|absolutely|ja|oui|sí|si|certo)\b/i.test(normalized) ||
-      /^(please\s+)?(confirm|confirmed|go ahead|continue|select it|choose it|do it)\b/i.test(normalized) ||
-      /^(i confirm|you can select it|that'?s right|that is right|va bene)\b/i.test(normalized)
+      /^(?:uh|um|well)?\s*(yes|yes pleas|yeah|yep|yup|sure|okay|ok|correct|absolutely|affirmative|of course|certainly|ja|oui|sí|si|certo)(\s+(please|thank you|thanks|thankyou))?$/i.test(normalized) ||
+      /^(please\s+)?(confirm|confirmed|go ahead|continue|select it|choose it|do it|please do|proceed)(\s+(please|thank you|thanks))?$/i.test(normalized) ||
+      /^(i confirm|i agree|you can select it|that's right|that is right|sounds good|va bene)(\s+(please|thank you|thanks))?$/i.test(normalized)
     );
   }, []);
 
@@ -248,15 +261,105 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
   );
   speakRef.current = speak;
 
+  const confirmPendingAction = useCallback(
+    (text, displayUser = true) => {
+      if (!pendingActionRef.current || !isConfirmation(text)) return false;
+      const action = pendingActionRef.current;
+      pendingActionRef.current = null;
+      queuedInputRef.current = null;
+      clearListeningTimer();
+      recognitionSuppressedRef.current = true;
+      try {
+        recognitionRef.current?.abort();
+      } catch (_) {
+        // Recognition may already have completed.
+      }
+      setListening(false);
+      setInput("");
+      const confirmation = `Perfect. I’ll select “${action.label}” and continue.`;
+      setMessages((m) => [
+        ...m,
+        ...(displayUser ? [{ role: "user", content: text }] : []),
+        { role: "assistant", content: confirmation },
+      ]);
+      window.dispatchEvent(
+        new CustomEvent("era-questionnaire-action", {
+          detail: { ...action, confirmed: true },
+        }),
+      );
+      setTimeout(() => speak(confirmation), 150);
+      return true;
+    },
+    [isConfirmation, clearListeningTimer, speak],
+  );
+  confirmPendingActionRef.current = confirmPendingAction;
+
   const sendMessage = useCallback(
     async (msgText, options = {}) => {
       const text = (msgText ?? "").trim();
-      if (!text || streaming) return;
+      if (!text) return;
+      if (streaming) {
+        // A short voice reply can arrive during the final milliseconds of Era's response.
+        // Preserve it instead of silently discarding an affirmative confirmation.
+        queuedInputRef.current = { text, options };
+        return;
+      }
       const displayUser = options.displayUser !== false;
       const expectResponse = options.expectResponse !== false;
       const baseQuestionnaireContext =
         options.questionnaireContext || window.eraQuestionnaireContext || null;
       const normalizedCommand = text.toLowerCase().trim().replace(/[.,!?]/g, "");
+
+      // A customer may state the visible choice and confirm it in the same
+      // utterance, for example: "Balanced growth with moderate risk, yes please."
+      const normalizeOptionText = (value) =>
+        String(value || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")
+          .trim()
+          .replace(/\s+/g, " ");
+      const normalizedAnswer = normalizeOptionText(text);
+      const combinedAffirmative =
+        /\b(yes|yeah|yep|yup|ok|okay|sure|correct|confirm|confirmed|proceed)\b/i.test(normalizedAnswer) &&
+        !/\b(no|not|don't|do not|wait|stop)\b/i.test(text);
+      const affirmedOption = combinedAffirmative
+        ? baseQuestionnaireContext?.options?.find((option) =>
+            normalizedAnswer.includes(normalizeOptionText(option.label)),
+          )
+        : null;
+
+      if (affirmedOption && baseQuestionnaireContext?.question_id) {
+        clearListeningTimer();
+        recognitionSuppressedRef.current = true;
+        try {
+          recognitionRef.current?.abort();
+        } catch (_) {
+          // Recognition may already have completed.
+        }
+        pendingActionRef.current = null;
+        setInput("");
+        setListening(false);
+        const reply = "Understood. I’ll continue.";
+        setMessages((m) => [
+          ...m,
+          ...(displayUser ? [{ role: "user", content: text }] : []),
+          { role: "assistant", content: reply },
+        ]);
+        window.dispatchEvent(
+          new CustomEvent("era-questionnaire-action", {
+            detail: {
+              question_id: baseQuestionnaireContext.question_id,
+              value: affirmedOption.value,
+              label: affirmedOption.label,
+              confidence: "high",
+              confirmed: true,
+              exact_match: true,
+            },
+          }),
+        );
+        setTimeout(() => speak(reply, { listenAfter: false }), 100);
+        return;
+      }
 
       const runLocalCommand = (reply, action) => {
         pendingActionRef.current = null;
@@ -317,24 +420,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         return;
       }
 
-      if (pendingActionRef.current && isConfirmation(text)) {
-        const action = pendingActionRef.current;
-        pendingActionRef.current = null;
-        setInput("");
-        const confirmation = `Perfect. I’ll select “${action.label}” and continue.`;
-        setMessages((m) => [
-          ...m,
-          ...(displayUser ? [{ role: "user", content: text }] : []),
-          { role: "assistant", content: confirmation },
-        ]);
-        window.dispatchEvent(
-          new CustomEvent("era-questionnaire-action", {
-            detail: { ...action, confirmed: true },
-          }),
-        );
-        setTimeout(() => speak(confirmation), 150);
-        return;
-      }
+      if (confirmPendingAction(text, displayUser)) return;
 
       if (pendingActionRef.current && isRejection(text)) {
         pendingActionRef.current = null;
@@ -426,6 +512,18 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
             }
           }
         }
+        if (
+          pendingActionRef.current &&
+          /\b(confirmed|i(?:'|’)ll select|selected|selection confirmed)\b/i.test(full)
+        ) {
+          const pendingLabel = pendingActionRef.current.label;
+          full = `I recommend “${pendingLabel}.” Would you like me to select it and continue?`;
+          setMessages((m) => {
+            const copy = [...m];
+            copy[copy.length - 1] = { role: "assistant", content: full };
+            return copy;
+          });
+        }
         if (full) speak(full, { listenAfter: expectResponse });
       } catch (e) {
         if (e.name === "AbortError") return;
@@ -441,11 +539,17 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         if (activeRequestRef.current === controller) {
           activeRequestRef.current = null;
           setStreaming(false);
+          const queued = queuedInputRef.current;
+          queuedInputRef.current = null;
+          if (queued) {
+            setTimeout(() => sendMessageRef.current?.(queued.text, queued.options), 100);
+          }
         }
       }
     },
-    [streaming, sessionId, langLabel, speak, isConfirmation, isRejection, clearListeningTimer, navigate],
+    [streaming, sessionId, langLabel, speak, isRejection, clearListeningTimer, navigate, confirmPendingAction],
   );
+  sendMessageRef.current = sendMessage;
 
   const greetLocal = useCallback(
     (text) => {
@@ -463,12 +567,19 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
     rec.continuous = false;
     rec.interimResults = false;
     rec.lang = locale;
+    // The five-second guard is only for initial silence. Once the customer
+    // starts talking, let the browser listen until their utterance finishes.
+    rec.onspeechstart = () => {
+      clearListeningTimer();
+      setListening(true);
+    };
     rec.onresult = (e) => {
       if (recognitionSuppressedRef.current) return;
       clearListeningTimer();
       const text = e.results[0][0].transcript;
       setInput(text);
       setListening(false);
+      if (confirmPendingActionRef.current?.(text, true)) return;
       setTimeout(() => sendMessage(text), 200);
     };
     rec.onend = () => setListening(false);
@@ -538,6 +649,11 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
     };
     window.eraGuideQuestion = (questionnaireContext, isFirstQuestion = false) => {
       setFloatingOpen(true);
+      if (isFirstQuestion) {
+        // The Objectives greeting already introduces Era. Replace the generic
+        // panel welcome instead of showing two near-identical introductions.
+        setMessages([]);
+      }
       const options = questionnaireContext.options
         .map((option) => `${option.value}. ${option.label}`)
         .join("\n");
