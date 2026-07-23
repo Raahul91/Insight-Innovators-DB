@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Target, TrendingUp, Sparkles } from "lucide-react";
+import { ERAAvatar } from "./ERAAvatar";
 
 const items = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, testid: "nav-dashboard" },
@@ -51,11 +52,9 @@ export const Sidebar = () => {
 
       <div className="mt-auto rounded-xl border border-[var(--border)] p-4 bg-gradient-to-b from-white to-gray-50">
         <div className="flex items-center gap-3 mb-2">
-          <img
-            src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=srgb&fm=jpg&w=120&h=120&fit=crop&q=80"
-            alt="ERA"
-            className="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm"
-          />
+          <div className="h-11 w-11 rounded-full ring-2 ring-white shadow-sm overflow-hidden">
+            <ERAAvatar size={44} />
+          </div>
           <div>
             <div className="font-display font-bold text-sm text-[var(--primary)] leading-tight">ERA</div>
             <div className="text-[10px] tracking-[0.15em] uppercase text-[var(--text-secondary)] mt-0.5">

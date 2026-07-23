@@ -85,6 +85,115 @@ body {
   animation: orb-pulse 2s infinite;
 }
 
+/* ERA avatar — blinking + talking */
+.era-avatar {
+  position: relative;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: #eaf2ff;
+}
+.era-avatar svg {
+  display: block;
+}
+
+.era-eyes {
+  transform-origin: 60px 62px;
+  animation: era-blink 5.2s infinite ease-in-out;
+}
+@keyframes era-blink {
+  0%, 91%, 96%, 100% {
+    transform: scaleY(1);
+  }
+  93.5% {
+    transform: scaleY(0.05);
+  }
+}
+
+.era-mouth-oval,
+.era-mouth-teeth {
+  transform-origin: 60px 83px;
+  transform: scaleY(0.15);
+  transition: transform 0.15s ease-out;
+}
+.era-mouth-line {
+  opacity: 1;
+  transition: opacity 0.12s;
+}
+.era-avatar[data-speaking="true"] .era-mouth-oval {
+  animation: era-talk 0.24s infinite ease-in-out;
+}
+.era-avatar[data-speaking="true"] .era-mouth-teeth {
+  animation: era-talk-teeth 0.24s infinite ease-in-out;
+}
+.era-avatar[data-speaking="true"] .era-mouth-line {
+  opacity: 0;
+}
+@keyframes era-talk {
+  0% { transform: scaleY(0.25) scaleX(1); }
+  25% { transform: scaleY(1.6) scaleX(0.9); }
+  50% { transform: scaleY(0.4) scaleX(1.05); }
+  75% { transform: scaleY(1.9) scaleX(0.85); }
+  100% { transform: scaleY(0.25) scaleX(1); }
+}
+@keyframes era-talk-teeth {
+  0% { transform: scaleY(0.2); }
+  25% { transform: scaleY(1.2); }
+  50% { transform: scaleY(0.3); }
+  75% { transform: scaleY(1.4); }
+  100% { transform: scaleY(0.2); }
+}
+
+.era-listen-ring {
+  opacity: 0;
+  transform-origin: 60px 60px;
+}
+.era-avatar[data-listening="true"] .era-listen-ring {
+  opacity: 0.8;
+  animation: era-listen-rotate 4s linear infinite;
+}
+@keyframes era-listen-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Head bob when speaking */
+.era-avatar[data-speaking="true"] {
+  animation: era-head-bob 1.4s infinite ease-in-out;
+}
+@keyframes era-head-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-1px) rotate(-1deg); }
+  75% { transform: translateY(1px) rotate(1deg); }
+}
+
+/* Sound waves next to avatar when speaking */
+.era-waves {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.era-waves.active {
+  opacity: 1;
+}
+.era-waves span {
+  display: inline-block;
+  width: 2.5px;
+  border-radius: 3px;
+  background: currentColor;
+  animation: era-wave 1s infinite ease-in-out;
+}
+.era-waves span:nth-child(1) { height: 6px; animation-delay: -0.9s; }
+.era-waves span:nth-child(2) { height: 10px; animation-delay: -0.6s; }
+.era-waves span:nth-child(3) { height: 14px; animation-delay: -0.3s; }
+.era-waves span:nth-child(4) { height: 10px; animation-delay: -0.15s; }
+.era-waves span:nth-child(5) { height: 6px; animation-delay: 0s; }
+@keyframes era-wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1.2); }
+}
+
 /* Fade-in for content */
 @keyframes fade-up {
   from {

@@ -3,9 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Send, X, Volume2, VolumeX } from "lucide-react";
 import { API } from "../lib/api";
 import { useLanguage } from "../lib/language";
-
-const ARIA_FACE =
-  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=srgb&fm=jpg&w=240&h=240&fit=crop&q=80";
+import { ERAAvatar } from "./ERAAvatar";
 
 const SESSION_KEY = "era-session-id";
 const getSessionId = () => {
@@ -199,17 +197,10 @@ export const AIAgent = ({ portfolioContext }) => {
         aria-label="Open ERA assistant"
       >
         <div
-          className={`relative h-16 w-16 rounded-full overflow-hidden ring-4 ring-white shadow-xl ${
-            speaking || listening ? "orb-pulse" : ""
-          } transition-transform group-hover:scale-105`}
+          className={`relative h-16 w-16 rounded-full overflow-hidden ring-4 ring-white shadow-xl transition-transform group-hover:scale-105`}
         >
-          <img
-            src={ARIA_FACE}
-            alt="ERA - European Relationship Assistant"
-            className="h-full w-full object-cover"
-            draggable={false}
-          />
-          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[var(--success)] border-2 border-white" />
+          <ERAAvatar size={64} speaking={speaking} listening={listening} />
+          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[var(--success)] border-2 border-white z-10" />
         </div>
       </button>
 
@@ -225,15 +216,16 @@ export const AIAgent = ({ portfolioContext }) => {
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
               <div className="flex items-center gap-3">
-                <div
-                  className={`h-10 w-10 rounded-full overflow-hidden ring-2 ring-white ${
-                    speaking ? "orb-pulse" : ""
-                  }`}
-                >
-                  <img src={ARIA_FACE} alt="ERA" className="h-full w-full object-cover" />
+                <div className="h-12 w-12 rounded-full overflow-hidden ring-2 ring-white">
+                  <ERAAvatar size={48} speaking={speaking} listening={listening} />
                 </div>
                 <div>
-                  <div className="font-display font-bold text-[var(--primary)] leading-tight">ERA</div>
+                  <div className="font-display font-bold text-[var(--primary)] leading-tight flex items-center gap-2">
+                    ERA
+                    <span className={`era-waves text-[var(--accent)] ${speaking ? "active" : ""}`} aria-hidden>
+                      <span /><span /><span /><span /><span />
+                    </span>
+                  </div>
                   <div className="text-xs text-[var(--text-secondary)]">
                     {streaming ? "…" : listening ? "◉ live" : speaking ? "♪" : t("era_role")}
                   </div>
