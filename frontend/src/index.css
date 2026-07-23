@@ -85,7 +85,7 @@ body {
   animation: orb-pulse 2s infinite;
 }
 
-/* ERA freestanding 3D character */
+/* ERA human advisor */
 .era-character {
   position: relative;
   display: inline-flex;
@@ -93,19 +93,43 @@ body {
   justify-content: center;
   overflow: visible;
 }
-.era-character .era-character-img {
+.era-character .era-character-figure {
   position: relative;
   z-index: 2;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  transform-origin: 50% 85%;
+  overflow: hidden;
   filter: drop-shadow(0 22px 40px rgba(10, 37, 64, 0.20));
+  transform-origin: 50% 78%;
   animation: era-breathe 4.2s ease-in-out infinite;
+}
+.era-character .era-character-img {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 82%;
+  height: auto;
+  max-width: none;
+  transform: translateX(-50%);
+  will-change: transform;
+}
+.era-character .era-character-img-face {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 34%, transparent 46%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 34%, transparent 46%);
+  z-index: 2;
+}
+.era-character .era-character-img-gesture {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 34%, #000 46%, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, transparent 34%, #000 46%, #000 100%);
+  z-index: 1;
+  will-change: opacity;
+}
+.era-character .era-character-img-gesture-speaking {
+  opacity: 0;
 }
 @keyframes era-breathe {
   0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-2px) scale(1.008); }
+  50% { transform: translateY(-2px) scale(1.006); }
 }
 .era-character .era-halo {
   position: absolute;
@@ -124,28 +148,34 @@ body {
 @keyframes era-halo-breath {
   0%, 100% { transform: scale(1); opacity: 0.55; }
   50% { transform: scale(1.18); opacity: 1; }
+  pointer-events: none;
 }
-.era-character[data-speaking="true"] .era-character-img {
-  animation: era-speak-body 2.4s infinite ease-in-out;
+.era-character[data-speaking="true"] .era-character-figure {
+  animation: era-human-talk 3.6s infinite cubic-bezier(.45, 0, .55, 1);
 }
-@keyframes era-speak-body {
-  0%   { transform: translateY(0)    rotate(0deg)  scale(1); }
-  12%  { transform: translateY(-3px) rotate(-2deg) scale(1.02); }
-  24%  { transform: translateY(-1px) rotate(-1deg) scale(1.005); }
-  36%  { transform: translateY(-2px) rotate(2deg)  scale(1.015); }
-  48%  { transform: translateY(0)    rotate(3deg)  scale(1.01); }
-  60%  { transform: translateY(-2px) rotate(0deg)  scale(1.02); }
-  72%  { transform: translateY(-3px) rotate(-1.5deg) scale(1.015); }
-  84%  { transform: translateY(-1px) rotate(1.5deg) scale(1.005); }
-  100% { transform: translateY(0)    rotate(0deg)  scale(1); }
+.era-character[data-speaking="true"] .era-character-img-gesture-idle {
+  animation: era-gesture-idle 4.8s infinite ease-in-out;
 }
-.era-character[data-speaking="true"] {
-  animation: era-sway 3.2s infinite ease-in-out;
+.era-character[data-speaking="true"] .era-character-img-gesture-speaking {
+  animation: era-gesture-speaking 4.8s infinite ease-in-out;
 }
-@keyframes era-sway {
-  0%, 100% { transform: translateX(0); }
-  25%      { transform: translateX(4px); }
-  75%      { transform: translateX(-4px); }
+@keyframes era-human-talk {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  16%      { transform: translateY(-2px) rotate(-0.45deg) scale(1.004); }
+  34%      { transform: translateY(-4px) rotate(0.35deg) scale(1.008); }
+  52%      { transform: translateY(-1px) rotate(0.55deg) scale(1.003); }
+  70%      { transform: translateY(-4px) rotate(-0.25deg) scale(1.007); }
+  86%      { transform: translateY(-2px) rotate(0.2deg) scale(1.004); }
+}
+@keyframes era-gesture-idle {
+  0%, 18%  { opacity: 1; }
+  32%, 58% { opacity: 0; }
+  72%, 100% { opacity: 1; }
+}
+@keyframes era-gesture-speaking {
+  0%, 18%  { opacity: 0; }
+  32%, 58% { opacity: 1; }
+  72%, 100% { opacity: 0; }
 }
 .era-character .era-listen-svg {
   position: absolute;
@@ -154,65 +184,6 @@ body {
   opacity: 0;
   pointer-events: none;
   transform-origin: 50% 50%;
-}
-.era-character[data-listening="true"] .era-listen-svg {
-  opacity: 1;
-  animation: era-listen-rotate 4s linear infinite;
-}
-@keyframes era-listen-rotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Hands — positioned to look like they emerge from the blazer */
-.era-hand {
-  position: absolute;
-  z-index: 3;
-  width: 22%;
-  height: 22%;
-  filter: drop-shadow(0 6px 10px rgba(10, 37, 64, 0.22));
-  transform-origin: 50% 5%;
-  transition: transform 0.35s ease;
-}
-.era-hand-left {
-  bottom: 12%;
-  left: 8%;
-  transform: rotate(-20deg) translateY(4%);
-}
-.era-hand-right {
-  bottom: 12%;
-  right: 8%;
-  transform: rotate(20deg) translateY(4%);
-}
-.era-character .era-hand-left  { animation: era-hand-left-idle  6s ease-in-out infinite; }
-.era-character .era-hand-right { animation: era-hand-right-idle 6.3s ease-in-out infinite; }
-@keyframes era-hand-left-idle {
-  0%, 100% { transform: rotate(-20deg) translateY(4%); }
-  50%      { transform: rotate(-16deg) translateY(2%); }
-}
-@keyframes era-hand-right-idle {
-  0%, 100% { transform: rotate(20deg) translateY(4%); }
-  50%      { transform: rotate(16deg) translateY(2%); }
-}
-.era-character[data-speaking="true"] .era-hand-left {
-  animation: era-hand-left-talk 2.4s ease-in-out infinite;
-}
-.era-character[data-speaking="true"] .era-hand-right {
-  animation: era-hand-right-talk 2.6s ease-in-out infinite;
-}
-@keyframes era-hand-left-talk {
-  0%   { transform: rotate(-20deg) translate(0, 4%); }
-  25%  { transform: rotate(-45deg) translate(-6%, -14%); }
-  50%  { transform: rotate(-15deg) translate(-2%, -22%); }
-  75%  { transform: rotate(-38deg) translate(-6%, -10%); }
-  100% { transform: rotate(-20deg) translate(0, 4%); }
-}
-@keyframes era-hand-right-talk {
-  0%   { transform: rotate(20deg)  translate(0, 4%); }
-  20%  { transform: rotate(48deg)  translate(6%, -12%); }
-  45%  { transform: rotate(28deg)  translate(10%, -22%) scale(1.08); }
-  70%  { transform: rotate(52deg)  translate(4%, -14%); }
-  100% { transform: rotate(20deg)  translate(0, 4%); }
 }
 .era-character[data-listening="true"] .era-listen-svg {
   opacity: 1;

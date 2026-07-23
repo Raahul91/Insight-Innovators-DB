@@ -133,18 +133,23 @@ class TestChat:
         ) as r:
             assert r.status_code == 200, r.text
             assert "text/event-stream" in r.headers.get("content-type", "")
+            event_type = "message"
             for raw in r.iter_lines(decode_unicode=True):
                 if not raw:
                     continue
+                if raw.startswith("event:"):
+                    event_type = raw[6:].strip()
+                    continue
                 if raw.startswith("data:"):
-                    payload_txt = raw[5:].lstrip()
-                    if payload_txt == "[DONE]":
+                    payload = json.loads(raw[5:].lstrip())
+                    if event_type == "done":
                         got_done = True
                         break
-                    if payload_txt.startswith("[error]"):
+                    if event_type == "error":
                         got_error = True
                         break
-                    got_content += payload_txt
+                    if event_type == "message":
+                        got_content += payload.get("text", "")
         assert not got_error, f"Stream returned error: {got_content}"
         assert got_done, "Did not receive [DONE]"
         assert len(got_content.strip()) > 5, f"Empty streamed content: '{got_content}'"

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchQuestions, submitQuestionnaire } from "../lib/api";
-import { CheckCircle2, ChevronLeft, ChevronRight, RotateCcw, HelpCircle, Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, RotateCcw, HelpCircle, Sparkles, ArrowRight, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "../lib/language";
 
@@ -18,22 +19,94 @@ export default function Objectives() {
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [eraStreaming, setEraStreaming] = useState(false);
+  const [eraConfirmedQuestion, setEraConfirmedQuestion] = useState(null);
   const [greetedResult, setGreetedResult] = useState(false);
+  const startedWithEra = useRef(false);
+  const currentQ = questions[step];
+  const total = questions.length;
+  const progress = total ? ((step + (result ? 1 : 0)) / total) * 100 : 0;
 
   useEffect(() => {
     fetchQuestions().then((data) => setQuestions(data.questions));
   }, []);
 
-  // Auto-greet on landing (once per mount)
+  // Give Era the exact visible choices and let the LLM ask each question.
   useEffect(() => {
+    if (!currentQ || result) return undefined;
+    const questionnaireContext = {
+      question_id: currentQ.id,
+      question: currentQ.text,
+      options: currentQ.options,
+      selected_value: answers[currentQ.id] ?? null,
+      step: step + 1,
+      total,
+    };
+    window.eraQuestionnaireContext = questionnaireContext;
     const timer = setTimeout(() => {
-      if (typeof window.eraGreet === "function") {
-        window.eraGreet(t("greet_objectives"));
+      if (typeof window.eraGuideQuestion === "function") {
+        window.eraGuideQuestion(questionnaireContext, !startedWithEra.current);
+        startedWithEra.current = true;
       }
-    }, 900);
-    return () => clearTimeout(timer);
+    }, 700);
+    return () => {
+      clearTimeout(timer);
+      if (window.eraQuestionnaireContext?.question_id === currentQ.id) {
+        delete window.eraQuestionnaireContext;
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentQ?.id, result]);
+
+  // Apply Era's recommendation only after the customer explicitly confirms it.
+  useEffect(() => {
+    if (!currentQ) return undefined;
+    const handler = (event) => {
+      const action = event.detail;
+      if (action?.question_id !== currentQ.id || !action.confirmed) return;
+      const matched = currentQ.options.find((option) => option.value === action.value);
+      if (!matched) return;
+      setAnswers((existing) => ({ ...existing, [currentQ.id]: matched.value }));
+      window.eraQuestionnaireContext = {
+        ...window.eraQuestionnaireContext,
+        selected_value: matched.value,
+      };
+      toast.success("Era selected an answer", { description: matched.label });
+      setEraConfirmedQuestion(currentQ.id);
+    };
+    window.addEventListener("era-questionnaire-action", handler);
+    return () => window.removeEventListener("era-questionnaire-action", handler);
+  }, [currentQ]);
+
+  // Continue automatically after the confirmed selection has rendered.
+  useEffect(() => {
+    if (eraConfirmedQuestion !== currentQ?.id || answers[currentQ.id] === undefined) return;
+    const timer = setTimeout(() => {
+      setEraConfirmedQuestion(null);
+      if (step < total - 1) {
+        setStep((value) => value + 1);
+        return;
+      }
+      const submitConfirmedAnswers = async () => {
+        setSubmitting(true);
+        try {
+          const payload = {
+            answers: Object.entries(answers).map(([question_id, value]) => ({ question_id, value })),
+          };
+          const res = await submitQuestionnaire(payload);
+          setResult(res);
+          toast.success("Objectives assessment complete", {
+            description: `Recommended horizon: ${res.horizon}`,
+          });
+        } catch (_) {
+          toast.error("Could not compute results. Try again.");
+        } finally {
+          setSubmitting(false);
+        }
+      };
+      submitConfirmedAnswers();
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [eraConfirmedQuestion, answers, currentQ, step, total]);
 
   // Listen to ERA streaming/speaking status
   useEffect(() => {
@@ -47,18 +120,23 @@ export default function Objectives() {
     if (result && !greetedResult && typeof window.askERA === "function") {
       setGreetedResult(true);
       const alloc = result.allocation_suggestion.map((a) => `${a.category} ${a.percentage}%`).join(", ");
-      const prompt = `${t("era_result_summary_prompt")}\n\nAssessment result:\n- Horizon: ${result.horizon}\n- Risk profile: ${result.risk_profile}\n- Score: ${result.total_score}/20\n- Suggested allocation: ${alloc}`;
-      setTimeout(() => window.askERA(prompt), 700);
+      const prompt = `${t("era_result_summary_prompt")} Explain this as a final concise summary. Do not ask the customer a question or expect another answer.\n\nAssessment result:\n- Horizon: ${result.horizon}\n- Risk profile: ${result.risk_profile}\n- Score: ${result.total_score}/20\n- Suggested allocation: ${alloc}`;
+      window.eraMoveOn?.();
+      setTimeout(() => window.askERA(prompt, { displayUser: false, expectResponse: false }), 700);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
-  const currentQ = questions[step];
-  const total = questions.length;
-  const progress = total ? ((step + (result ? 1 : 0)) / total) * 100 : 0;
-
   const handleSelect = (value) => {
     setAnswers((a) => ({ ...a, [currentQ.id]: value }));
+    setEraConfirmedQuestion(currentQ.id);
+    setTimeout(() => {
+      try {
+        window.eraMoveOn?.();
+      } catch (_) {
+        // The questionnaire handoff must continue even if a browser media API fails.
+      }
+    }, 0);
   };
 
   const goNext = async () => {
@@ -151,6 +229,33 @@ export default function Objectives() {
             </div>
 
             <p className="text-[var(--text-secondary)] leading-relaxed mb-8">{result.recommendation}</p>
+
+            <div
+              data-testid="product-recommendation-banner"
+              className="mb-8 rounded-2xl bg-gradient-to-r from-[var(--primary)] to-[#174a72] p-6 text-white flex flex-col md:flex-row md:items-center gap-5"
+            >
+              <div className="h-12 w-12 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
+                <ShoppingBag size={22} />
+              </div>
+              <div className="flex-1">
+                <div className="text-xs tracking-[0.16em] uppercase text-white/70 mb-1">
+                  Personalised product shortlist
+                </div>
+                <h3 className="font-display font-bold text-xl">
+                  Explore products suited to your {result.risk_profile.toLowerCase()} profile
+                </h3>
+                <p className="text-sm text-white/75 mt-1">
+                  See investment options aligned with your {result.horizon.toLowerCase()} horizon and financial objectives.
+                </p>
+              </div>
+              <Link
+                to={`/products?recommended=true&risk=${encodeURIComponent(result.risk_profile)}&horizon=${encodeURIComponent(result.horizon)}`}
+                data-testid="view-recommended-products"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-white text-[var(--primary)] text-sm font-bold hover:bg-white/90 transition-colors whitespace-nowrap"
+              >
+                View recommended products <ArrowRight size={16} />
+              </Link>
+            </div>
 
             <div className="border-t border-[var(--border)] pt-6">
               <div className="text-xs tracking-[0.15em] uppercase text-[var(--text-secondary)] mb-3">

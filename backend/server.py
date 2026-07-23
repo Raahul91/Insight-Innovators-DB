@@ -3,15 +3,15 @@ from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from openai import AsyncOpenAI
 import os
+import json
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 import uuid
 from datetime import datetime, timezone
-
-from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -20,7 +20,9 @@ mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
-EMERGENT_LLM_KEY = os.environ["EMERGENT_LLM_KEY"]
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.6-sol")
+openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -88,6 +90,28 @@ class ChatRequest(BaseModel):
     session_id: str
     language: Optional[str] = "English"
     portfolio_context: Optional[dict] = None
+    questionnaire_context: Optional[dict] = None
+
+
+class EraTurn(BaseModel):
+    message: str = Field(
+        description="A concise, warm reply written to be spoken aloud."
+    )
+    question_id: Optional[str] = Field(
+        default=None,
+        description="The current questionnaire question id, when applicable."
+    )
+    selected_option_value: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=4,
+        description="Select an option only when the user's answer clearly supports it."
+    )
+    selected_option_label: Optional[str] = Field(
+        default=None,
+        description="The exact label of the selected option, or null."
+    )
+    confidence: Literal["none", "low", "medium", "high"] = "none"
 
 
 # ---------- Static/mock data ----------
@@ -292,14 +316,23 @@ async def submit_questionnaire(sub: QuestionnaireSubmission):
 @api_router.post("/chat/stream")
 async def chat_stream(req: ChatRequest):
     system_msg = (
-        "You are ERA (European Relationship Assistant), a warm, human financial advisor for European retail investors on a light-professional portfolio app. "
-        "Introduce yourself as ERA when appropriate. Speak as a friendly professional, not a machine — use natural first-person phrasing ('I'd suggest…', 'in your case…'). "
-        "Give concise, clear guidance in 2-4 sentences. Never guarantee returns. "
-        "Use EUR (€) for all monetary figures. Assume UCITS ETFs, MiFID II framework, and EU-domiciled products. "
-        "When the user asks about a questionnaire question, explain it in plain language, then walk through what each answer choice implies, "
-        "and — if they ask you to help them decide — ask one short follow-up about their situation and recommend a single best choice. "
-        "When discussing the user's portfolio, use the context provided. "
-        "Be conversational since your response may be spoken aloud."
+        "Role: You are Era, the European Relationship Assistant in a retail-investing app. "
+        "Personality: warm, calm, concise, and conversational because every reply may be spoken aloud. "
+        "Goal: guide the customer through the current on-screen financial-objectives question. "
+        "Ask the question naturally, explain it in plain language when needed, and listen to the customer's answer. "
+        "When their answer clearly matches one available option, return exactly that option as a proposed choice, "
+        "but do not claim it is already selected. Tell the customer which option you recommend and ask a short, "
+        "explicit confirmation question such as, 'Shall I select that and continue?' "
+        "If the questionnaire context contains pending_proposal, the app is waiting for confirmation of that choice. "
+        "If the customer's reply is not a clear yes or no, ask again for an explicit yes-or-no confirmation. "
+        "If they ask what the proposal or question means, explain it briefly in plain language, then ask again whether "
+        "you should select the pending choice and continue. Keep returning that same proposed option unless the customer "
+        "clearly changes their underlying answer. "
+        "If their answer is ambiguous, do not guess; ask one short follow-up question and leave the selection empty. "
+        "Only the app applies the proposal after the customer confirms it. "
+        "Never invent an option, never select a value outside the supplied choices, never guarantee returns, "
+        "and do not provide regulated personalized financial advice. Use EUR and European-investor context where relevant. "
+        "Keep ordinary replies to 1-3 short sentences."
     )
     if req.language and req.language.lower() not in ("english", "en"):
         system_msg += (
@@ -310,35 +343,81 @@ async def chat_stream(req: ChatRequest):
         )
     if req.portfolio_context:
         system_msg += f"\n\nUser portfolio context: {req.portfolio_context}"
-
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=req.session_id,
-        system_message=system_msg,
-    ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+    if req.questionnaire_context:
+        system_msg += (
+            "\n\nCurrent on-screen questionnaire context:\n"
+            + json.dumps(req.questionnaire_context, ensure_ascii=False)
+        )
 
     async def event_generator():
-        full_text = ""
         try:
-            async for event in chat.stream_message(UserMessage(text=req.message)):
-                if isinstance(event, TextDelta):
-                    full_text += event.content
-                    yield f"data: {event.content}\n\n"
-                elif isinstance(event, StreamDone):
-                    break
-        except Exception as e:
-            logger.exception("chat stream failed")
-            yield f"data: [error] {str(e)}\n\n"
-            return
+            if openai_client is None:
+                raise RuntimeError(
+                    "OpenAI is not configured. Add OPENAI_API_KEY to backend/.env and restart the backend."
+                )
 
-        # Persist conversation
-        await db.chat_messages.insert_many([
-            {"id": str(uuid.uuid4()), "session_id": req.session_id, "role": "user",
-             "content": req.message, "timestamp": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "session_id": req.session_id, "role": "assistant",
-             "content": full_text, "timestamp": datetime.now(timezone.utc).isoformat()},
-        ])
-        yield "data: [DONE]\n\n"
+            history = await db.chat_messages.find(
+                {"session_id": req.session_id},
+                {"_id": 0, "role": 1, "content": 1},
+            ).sort("timestamp", -1).limit(10).to_list(10)
+            history.reverse()
+            model_input = [
+                {"role": item["role"], "content": item["content"]}
+                for item in history
+                if item.get("role") in ("user", "assistant") and item.get("content")
+            ]
+            model_input.append({"role": "user", "content": req.message})
+
+            response = await openai_client.responses.parse(
+                model=OPENAI_MODEL,
+                instructions=system_msg,
+                input=model_input,
+                text_format=EraTurn,
+                reasoning={"effort": "low"},
+                text={"verbosity": "low"},
+                max_output_tokens=300,
+                store=False,
+            )
+            turn = response.output_parsed
+            if turn is None:
+                raise RuntimeError("OpenAI returned no structured response.")
+
+            action = None
+            context = req.questionnaire_context or {}
+            allowed_options = context.get("options") or []
+            allowed_by_value = {
+                option.get("value"): option.get("label")
+                for option in allowed_options
+                if isinstance(option, dict)
+            }
+            if (
+                turn.selected_option_value is not None
+                and turn.selected_option_value in allowed_by_value
+                and context.get("question_id")
+            ):
+                action = {
+                    "question_id": context["question_id"],
+                    "value": turn.selected_option_value,
+                    "label": allowed_by_value[turn.selected_option_value],
+                    "confidence": turn.confidence,
+                }
+
+            now = datetime.now(timezone.utc).isoformat()
+            await db.chat_messages.insert_many([
+                {"id": str(uuid.uuid4()), "session_id": req.session_id, "role": "user",
+                 "content": req.message, "timestamp": now},
+                {"id": str(uuid.uuid4()), "session_id": req.session_id, "role": "assistant",
+                 "content": turn.message, "timestamp": now},
+            ])
+
+            yield f"event: message\ndata: {json.dumps({'text': turn.message}, ensure_ascii=False)}\n\n"
+            if action:
+                yield f"event: questionnaire_action\ndata: {json.dumps(action, ensure_ascii=False)}\n\n"
+            yield "event: done\ndata: {}\n\n"
+        except Exception as e:
+            logger.exception("OpenAI chat turn failed")
+            error_message = str(e)
+            yield f"event: error\ndata: {json.dumps({'message': error_message})}\n\n"
 
     return StreamingResponse(
         event_generator(),

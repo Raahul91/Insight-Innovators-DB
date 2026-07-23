@@ -13,7 +13,7 @@ export const STRINGS = {
     era_intro:
       "Hi, I'm ERA — your European Relationship Assistant. I can walk you through the questionnaire, explain any question in plain language, and suggest which answer fits your situation best. Tap the mic and just talk to me, or type below.",
     greet_objectives:
-      "Welcome! I'm ERA. Let's figure out your investment profile together. I'll stay here on the right — just tap ‘Ask ERA to explain’ on any question if you need help.",
+      "Hi, I'm ERA, your personal guide for this assessment. I'll take you through five short questions to understand your goals, time horizon, and comfort with risk. If anything feels unclear, choose Ask ERA to explain for a simple explanation, or Help me answer this for a recommendation based on your situation. You can also speak to me or type a question at any time.",
     greet_dashboard:
       "Welcome back to your portfolio. I'm ERA — ask me anything about your holdings or performance, in any European language.",
     greet_products:

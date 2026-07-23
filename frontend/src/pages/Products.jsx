@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { fetchProducts } from "../lib/api";
 import { fmtCurrency, fmtPct } from "../lib/format";
 import { Search, TrendingUp, TrendingDown } from "lucide-react";
@@ -20,6 +21,10 @@ const RiskBadge = ({ level }) => {
 };
 
 export default function Products() {
+  const [searchParams] = useSearchParams();
+  const recommended = searchParams.get("recommended") === "true";
+  const profileRisk = searchParams.get("risk");
+  const profileHorizon = searchParams.get("horizon");
   const [category, setCategory] = useState("All");
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -34,14 +39,36 @@ export default function Products() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter(
+    const searched = !q ? products : products.filter(
       (p) => p.name.toLowerCase().includes(q) || p.ticker.toLowerCase().includes(q),
     );
-  }, [products, query]);
+    if (!recommended || !profileRisk) return searched;
+    const allowedRisk = {
+      Conservative: ["Low"],
+      Balanced: ["Low", "Medium"],
+      Aggressive: ["Medium", "High"],
+    }[profileRisk] || ["Low", "Medium", "High"];
+    return searched.filter((product) => allowedRisk.includes(product.risk));
+  }, [products, query, recommended, profileRisk]);
 
   return (
     <div className="p-6 md:p-10 fade-up" data-testid="products-page">
+      {recommended && profileRisk && (
+        <div
+          data-testid="recommended-products-context"
+          className="mb-6 rounded-2xl border border-[var(--accent)]/20 bg-[var(--accent)]/5 px-5 py-4"
+        >
+          <div className="text-xs tracking-[0.15em] uppercase text-[var(--accent)] font-semibold">
+            Recommended for your objectives
+          </div>
+          <div className="font-display font-bold text-xl text-[var(--primary)] mt-1">
+            {profileRisk} profile · {profileHorizon || "Personalised"} horizon
+          </div>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            Showing products with risk levels aligned to your completed assessment.
+          </p>
+        </div>
+      )}
       {/* Tabs */}
       <div className="flex flex-wrap items-center gap-2 mb-6">
         {CATEGORIES.map((cat) => {
