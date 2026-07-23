@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchQuestions, submitQuestionnaire } from "../lib/api";
-import { CheckCircle2, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, RotateCcw, HelpCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 const HORIZON_COLORS = {
@@ -170,12 +170,48 @@ export default function Objectives() {
           <div className="text-xs tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-3">
             Financial Objectives
           </div>
-          <h2
-            data-testid="question-text"
-            className="font-display font-black text-3xl md:text-4xl text-[var(--primary)] mb-8 leading-tight"
-          >
-            {currentQ.text}
-          </h2>
+          <div className="flex items-start justify-between gap-4">
+            <h2
+              data-testid="question-text"
+              className="font-display font-black text-3xl md:text-4xl text-[var(--primary)] mb-2 leading-tight"
+            >
+              {currentQ.text}
+            </h2>
+          </div>
+
+          {/* Ask Aria to help */}
+          <div className="flex flex-wrap items-center gap-2 mb-8">
+            <button
+              type="button"
+              data-testid="explain-question-btn"
+              onClick={() => {
+                const optList = currentQ.options.map((o) => `- "${o.label}"`).join("\n");
+                const prompt = `I'm on the "Financial Objectives" questionnaire. Please explain this question in plain, friendly language for a European retail investor, and tell me what each answer choice implies so I can pick the one that best fits me.\n\nQuestion: ${currentQ.text}\n\nAnswer choices:\n${optList}`;
+                if (typeof window.askAria === "function") {
+                  window.askAria(prompt);
+                } else {
+                  toast.info("AI advisor is loading, please try again in a moment.");
+                }
+              }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-xs font-semibold hover:bg-[var(--accent)]/20 transition-colors"
+            >
+              <HelpCircle size={13} /> Ask Aria to explain
+            </button>
+            <button
+              type="button"
+              data-testid="help-me-answer-btn"
+              onClick={() => {
+                const optList = currentQ.options.map((o) => `- "${o.label}"`).join("\n");
+                const prompt = `I'm not sure which answer to pick for this questionnaire question. Ask me one or two short, friendly questions to figure out my situation, then recommend which of the choices fits me best.\n\nQuestion: ${currentQ.text}\n\nAnswer choices:\n${optList}`;
+                if (typeof window.askAria === "function") {
+                  window.askAria(prompt);
+                }
+              }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--border)] bg-white text-[var(--primary)] text-xs font-semibold hover:bg-gray-50 transition-colors"
+            >
+              <Sparkles size={13} /> Help me answer this
+            </button>
+          </div>
 
           <div className="space-y-3">
             {currentQ.options.map((opt) => {

@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Send, X, Volume2, VolumeX, Sparkles } from "lucide-react";
+import { Mic, MicOff, Send, X, Volume2, VolumeX } from "lucide-react";
 import { API } from "../lib/api";
+
+const ARIA_FACE =
+  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=srgb&fm=jpg&w=240&h=240&fit=crop&q=80";
 
 const SESSION_KEY = "aria-session-id";
 const getSessionId = () => {
@@ -19,7 +22,7 @@ export const AIAgent = ({ portfolioContext }) => {
     {
       role: "assistant",
       content:
-        "Hi, I'm Aria. Ask me anything about your portfolio, financial goals, or investment products. You can also use the mic to talk.",
+        "Hi, I'm Aria — your EU investment advisor. I can walk you through the questionnaire, explain any question in plain language, and suggest which answer fits your situation best. Tap the mic and just talk to me, or type below.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -55,6 +58,19 @@ export const AIAgent = ({ portfolioContext }) => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, streaming]);
+
+  // Expose a global helper so any page (like the Objectives wizard) can
+  // ask Aria to explain something and auto-open the panel.
+  useEffect(() => {
+    window.askAria = (prompt) => {
+      setOpen(true);
+      setTimeout(() => sendMessage(prompt), 250);
+    };
+    return () => {
+      delete window.askAria;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streaming]);
 
   const speak = (text) => {
     if (!voiceEnabled || !window.speechSynthesis) return;
@@ -148,7 +164,7 @@ export const AIAgent = ({ portfolioContext }) => {
 
   return (
     <>
-      {/* Floating Toggle */}
+      {/* Floating Toggle - Human face */}
       <button
         data-testid="ai-agent-toggle"
         onClick={() => setOpen((v) => !v)}
@@ -156,12 +172,17 @@ export const AIAgent = ({ portfolioContext }) => {
         aria-label="Open AI agent"
       >
         <div
-          className={`relative h-16 w-16 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--primary)] flex items-center justify-center shadow-xl ${
+          className={`relative h-16 w-16 rounded-full overflow-hidden ring-4 ring-white shadow-xl ${
             speaking || listening ? "orb-pulse" : ""
           } transition-transform group-hover:scale-105`}
         >
-          <Sparkles className="text-white" size={26} strokeWidth={2.2} />
-          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-[var(--success)] border-2 border-white" />
+          <img
+            src={ARIA_FACE}
+            alt="Aria - AI Advisor"
+            className="h-full w-full object-cover"
+            draggable={false}
+          />
+          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[var(--success)] border-2 border-white" />
         </div>
       </button>
 
@@ -179,14 +200,14 @@ export const AIAgent = ({ portfolioContext }) => {
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
               <div className="flex items-center gap-3">
                 <div
-                  className={`h-10 w-10 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--primary)] flex items-center justify-center ${
+                  className={`h-10 w-10 rounded-full overflow-hidden ring-2 ring-white ${
                     speaking ? "orb-pulse" : ""
                   }`}
                 >
-                  <Sparkles className="text-white" size={18} strokeWidth={2.4} />
+                  <img src={ARIA_FACE} alt="Aria" className="h-full w-full object-cover" />
                 </div>
                 <div>
-                  <div className="font-display font-bold text-[var(--primary)] leading-tight">Aria</div>
+                  <div className="font-display font-bold text-[var(--primary)] leading-tight">Aria Bennett</div>
                   <div className="text-xs text-[var(--text-secondary)]">
                     {streaming
                       ? "Thinking…"
@@ -194,7 +215,7 @@ export const AIAgent = ({ portfolioContext }) => {
                       ? "Listening…"
                       : speaking
                       ? "Speaking…"
-                      : "Investment Advisor"}
+                      : "EU Investment Advisor"}
                   </div>
                 </div>
               </div>
