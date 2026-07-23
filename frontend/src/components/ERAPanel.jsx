@@ -99,7 +99,7 @@ export const ERAPanel = () => {
             className="era-gesture"
             style={{ transform: gestureTransform, transition: "transform 0.6s cubic-bezier(.4,1.4,.6,1)" }}
           >
-            <ERAAvatar size={340} speaking={speaking} listening={listening} />
+            <ERAAvatar size={440} speaking={speaking} listening={listening} />
           </div>
         </div>
         <div className="mt-6 text-center">
