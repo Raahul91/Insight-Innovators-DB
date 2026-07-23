@@ -59,11 +59,9 @@ export const ERAPanel = () => {
         </div>
       </div>
 
-      {/* Big Avatar centered */}
+      {/* Big Avatar centered — freestanding character */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8">
-        <div className="relative">
-          <ERAAvatar size={280} speaking={speaking} listening={listening} />
-        </div>
+        <ERAAvatar size={340} speaking={speaking} listening={listening} />
         <div className="mt-6 text-center">
           <div className="flex items-center justify-center gap-3">
             <h2 className="font-display font-black text-4xl text-[var(--primary)]">ERA</h2>

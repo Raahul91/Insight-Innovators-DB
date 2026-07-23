@@ -52,8 +52,8 @@ export const Sidebar = () => {
 
       <div className="mt-auto rounded-xl border border-[var(--border)] p-4 bg-gradient-to-b from-white to-gray-50">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-11 w-11 rounded-full ring-2 ring-white shadow-sm overflow-hidden">
-            <ERAAvatar size={44} />
+          <div className="h-14 w-14 flex-shrink-0">
+            <ERAAvatar size={56} />
           </div>
           <div>
             <div className="font-display font-bold text-sm text-[var(--primary)] leading-tight">ERA</div>

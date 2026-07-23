@@ -4,26 +4,19 @@ const ERA_IMG =
   "https://customer-assets-lqy194kg.emergentagent.net/job_portfolio-builder-1659/artifacts/zb7zf1mo_agent-3d-icon-png-download-11770982.webp";
 
 /**
- * ERA — full 3D-style human avatar (call-centre style).
- * Uses the provided character illustration.
- * Adds subtle animations for `speaking` (bob + halo) and `listening` (rotating ring).
+ * ERA — full 3D character (freestanding, no circular chatbot wrapper).
+ * Preserves animations for `speaking` (halo + head bob) and `listening` (dashed ring behind).
  */
-export const ERAAvatar = ({ size = 64, speaking = false, listening = false, className = "" }) => {
+export const ERAAvatar = ({ size = 320, speaking = false, listening = false, className = "" }) => {
   return (
     <div
-      className={`era-avatar-3d ${className}`}
+      className={`era-character ${className}`}
       style={{ width: size, height: size }}
       data-speaking={speaking ? "true" : "false"}
       data-listening={listening ? "true" : "false"}
-      aria-label="ERA avatar"
+      aria-label="ERA — European Relationship Assistant"
     >
       <div className="era-halo" aria-hidden />
-      <img
-        src={ERA_IMG}
-        alt="ERA — European Relationship Assistant"
-        draggable={false}
-        className="era-avatar-img"
-      />
       <svg
         className="era-listen-svg"
         viewBox="0 0 100 100"
@@ -33,13 +26,19 @@ export const ERAAvatar = ({ size = 64, speaking = false, listening = false, clas
         <circle
           cx="50"
           cy="50"
-          r="47"
+          r="46"
           fill="none"
           stroke="#FF3B30"
-          strokeWidth="1.5"
+          strokeWidth="1.4"
           strokeDasharray="3 5"
         />
       </svg>
+      <img
+        src={ERA_IMG}
+        alt="ERA"
+        draggable={false}
+        className="era-character-img"
+      />
     </div>
   );
 };

@@ -42,9 +42,9 @@ export const AIAgent = () => {
         className="fixed bottom-6 right-6 z-40 group"
         aria-label="Open ERA assistant"
       >
-        <div className="relative h-16 w-16 rounded-full overflow-hidden ring-4 ring-white shadow-xl transition-transform group-hover:scale-105">
-          <ERAAvatar size={64} speaking={speaking} listening={listening} />
-          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[var(--success)] border-2 border-white z-10" />
+        <div className="relative h-24 w-24 transition-transform group-hover:scale-105">
+          <ERAAvatar size={96} speaking={speaking} listening={listening} />
+          <span className="absolute top-2 right-2 h-3.5 w-3.5 rounded-full bg-[var(--success)] border-2 border-white z-10" />
         </div>
       </button>
 
@@ -60,8 +60,8 @@ export const AIAgent = () => {
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full overflow-hidden ring-2 ring-white">
-                  <ERAAvatar size={48} speaking={speaking} listening={listening} />
+                <div className="h-14 w-14 flex-shrink-0">
+                  <ERAAvatar size={56} speaking={speaking} listening={listening} />
                 </div>
                 <div>
                   <div className="font-display font-bold text-[var(--primary)] leading-tight flex items-center gap-2">
