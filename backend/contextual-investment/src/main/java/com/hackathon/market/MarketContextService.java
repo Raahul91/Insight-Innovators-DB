@@ -28,10 +28,14 @@ public class MarketContextService {
 	{
 
         String ticker = finnhubClient.searchTicker(instrumentName);
+        
+        logger.info("finding ticker for instrument : "+instrumentName+"");
 
         List<FinnhubNews> companyNews =
                 finnhubClient.getCompanyNews(ticker);
 
+        logger.info("finding news for ticker : "+ticker+"");
+        
         List<MarketNews> marketNews = companyNews.stream()
                 .map(news -> new MarketNews(
                         news.headline(),

@@ -27,15 +27,9 @@ public class InvestmentInsightService {
     public InvestmentInsightResponse analyze(
             InvestmentInsightRequest request) {
 
-        String marketLookup = request.order().instrumentSymbol() == null
-                || request.order().instrumentSymbol().isBlank()
-                ? request.order().instrumentName()
-                : request.order().instrumentSymbol();
-	MarketContext marketContext = marketContextService.getMarketContext(marketLookup);
+	MarketContext marketContext = marketContextService.getMarketContext(request.order().instrumentName());
 
         String prompt = buildPrompt(request, marketContext);
-
-        logger.info("Final prompt : "+prompt);
 
         return chatClient.prompt()
                 .user(prompt)
