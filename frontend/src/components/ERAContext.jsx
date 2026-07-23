@@ -312,8 +312,15 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
                 return copy;
               });
             } else if (eventType === "questionnaire_action") {
-              // Keep the recommendation pending until the customer explicitly confirms.
-              pendingActionRef.current = payload;
+              if (payload.confirmed) {
+                pendingActionRef.current = null;
+                window.dispatchEvent(
+                  new CustomEvent("era-questionnaire-action", { detail: payload }),
+                );
+              } else {
+                // Keep inferred recommendations pending until the customer explicitly confirms.
+                pendingActionRef.current = payload;
+              }
             } else if (eventType === "error") {
               throw new Error(payload.message || "Error contacting Era.");
             }

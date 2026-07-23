@@ -23,8 +23,8 @@ const Shell = () => {
   const meta = PAGE_META[location.pathname] || PAGE_META["/"];
 
   return (
-    <div className="grain-overlay min-h-screen grid lg:grid-cols-2 md:grid-cols-[260px_1fr] grid-cols-1 bg-[var(--bg)]">
-      {/* Laptop+ : ERA occupies left half (50vw) */}
+    <div className="grain-overlay min-h-screen grid lg:grid-cols-[484px_minmax(0,1fr)] md:grid-cols-[260px_1fr] grid-cols-1 bg-[var(--bg)]">
+      {/* Laptop+ : compact ERA assistant rail; the active workspace stays primary */}
       <ERAPanel />
       {/* Mobile / tablet : keep the compact sidebar */}
       <div className="lg:hidden">

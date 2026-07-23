@@ -1,4 +1,4 @@
-# Meridian local development
+# EuroBank local development
 
 ## OpenAI-powered Era
 

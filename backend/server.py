@@ -7,6 +7,7 @@ from openai import AsyncOpenAI
 import os
 import json
 import logging
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
@@ -319,6 +320,10 @@ async def chat_stream(req: ChatRequest):
         "Role: You are Era, the European Relationship Assistant in a retail-investing app. "
         "Personality: warm, calm, concise, and conversational because every reply may be spoken aloud. "
         "Goal: guide the customer through the current on-screen financial-objectives question. "
+        "Strict scope: discuss only the current on-screen question, its available choices, the customer's financial "
+        "objectives, risk, horizon, investing experience, portfolio, or relevant European investment concepts. "
+        "For greetings or any unrelated, off-topic, joking, abusive, political, entertainment, coding, general-knowledge, "
+        "or non-financial request, reply with exactly: 'Sorry, I could not understand.' Do not answer or engage with it. "
         "Ask the question naturally, explain it in plain language when needed, and listen to the customer's answer. "
         "When their answer clearly matches one available option, return exactly that option as a proposed choice, "
         "but do not claim it is already selected. Tell the customer which option you recommend and ask a short, "
@@ -351,6 +356,43 @@ async def chat_stream(req: ChatRequest):
 
     async def event_generator():
         try:
+            context = req.questionnaire_context or {}
+            allowed_options = context.get("options") or []
+
+            def normalize_choice(value):
+                return re.sub(r"[^a-z0-9]+", " ", str(value).lower()).strip()
+
+            exact_option = next(
+                (
+                    option
+                    for option in allowed_options
+                    if isinstance(option, dict)
+                    and normalize_choice(option.get("label", "")) == normalize_choice(req.message)
+                ),
+                None,
+            )
+            if exact_option and context.get("question_id"):
+                exact_message = "Understood. I’ll continue."
+                now = datetime.now(timezone.utc).isoformat()
+                await db.chat_messages.insert_many([
+                    {"id": str(uuid.uuid4()), "session_id": req.session_id, "role": "user",
+                     "content": req.message, "timestamp": now},
+                    {"id": str(uuid.uuid4()), "session_id": req.session_id, "role": "assistant",
+                     "content": exact_message, "timestamp": now},
+                ])
+                action = {
+                    "question_id": context["question_id"],
+                    "value": exact_option.get("value"),
+                    "label": exact_option.get("label"),
+                    "confidence": "high",
+                    "confirmed": True,
+                    "exact_match": True,
+                }
+                yield f"event: message\ndata: {json.dumps({'text': exact_message}, ensure_ascii=False)}\n\n"
+                yield f"event: questionnaire_action\ndata: {json.dumps(action, ensure_ascii=False)}\n\n"
+                yield "event: done\ndata: {}\n\n"
+                return
+
             if openai_client is None:
                 raise RuntimeError(
                     "OpenAI is not configured. Add OPENAI_API_KEY to backend/.env and restart the backend."
@@ -383,8 +425,6 @@ async def chat_stream(req: ChatRequest):
                 raise RuntimeError("OpenAI returned no structured response.")
 
             action = None
-            context = req.questionnaire_context or {}
-            allowed_options = context.get("options") or []
             allowed_by_value = {
                 option.get("value"): option.get("label")
                 for option in allowed_options

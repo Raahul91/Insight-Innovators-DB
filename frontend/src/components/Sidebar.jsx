@@ -19,9 +19,9 @@ export const Sidebar = () => {
           <Sparkles className="text-white" size={20} strokeWidth={2.4} />
         </div>
         <div>
-          <div className="font-display font-black text-lg leading-none text-[var(--primary)]">MERIDIAN</div>
+          <div className="font-display font-black text-lg leading-none text-[var(--primary)]">EuroBank</div>
           <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--text-secondary)] mt-1">
-            EU Wealth OS
+            European Wealth
           </div>
         </div>
       </div>

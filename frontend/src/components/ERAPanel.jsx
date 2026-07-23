@@ -5,7 +5,7 @@ import { ERAAvatar } from "./ERAAvatar";
 import { useERA } from "./ERAContext";
 
 /**
- * Big left-half panel version of ERA — visible only on lg+ (laptop and above).
+ * Compact left assistant rail — visible only on lg+ (laptop and above).
  * Preserves all animations (halo, bob, waves, listen ring).
  */
 export const ERAPanel = () => {
@@ -58,53 +58,48 @@ export const ERAPanel = () => {
       <div className="pointer-events-none absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full bg-[var(--primary)]/10 blur-3xl" aria-hidden />
 
       {/* Brand row */}
-      <div className="px-10 pt-8 pb-4 relative z-10 flex items-center justify-between">
+      <div className="px-5 pt-5 pb-2 relative z-10 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-[var(--primary)] flex items-center justify-center">
-            <span className="font-display font-black text-white text-sm">M</span>
+          <div className="h-9 w-9 rounded-xl bg-[var(--primary)] flex items-center justify-center">
+            <span className="font-display font-black text-white text-xs">E</span>
           </div>
           <div>
-            <div className="font-display font-black text-lg leading-none text-[var(--primary)]">MERIDIAN</div>
+            <div className="font-display font-black text-base leading-none text-[var(--primary)]">EuroBank</div>
             <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--text-secondary)] mt-1">
-              EU Wealth OS
+              European Wealth
             </div>
           </div>
         </div>
-        <div className="text-[11px] tracking-[0.2em] uppercase text-[var(--text-secondary)]">
-          Live Advisor
+        <div className="text-[10px] tracking-[0.16em] uppercase text-[var(--text-secondary)]">
+          Assistant
         </div>
       </div>
 
-      {/* Big Avatar centered — freestanding character */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8">
+      {/* Compact assistant identity */}
+      <div className="relative z-10 flex flex-col items-center justify-center px-4 pt-2">
         <div className="relative" data-testid="era-gesture-wrap">
-          {/* Speech-bubble callout pointing to the active section */}
+          {/* Active-section badge */}
           <div
             key={sectionKey}
             data-testid={`era-callout-${sectionKey}`}
-            className="absolute -right-8 top-6 translate-x-full inline-flex items-center gap-2 pl-4 pr-3 py-2 rounded-2xl rounded-bl-none bg-white border border-[var(--border)] shadow-md era-callout"
+            className="relative z-30 mx-auto mb-1 flex w-fit items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 border border-[var(--border)] shadow-sm era-callout"
           >
-            <span className="text-sm font-semibold text-[var(--primary)] whitespace-nowrap">
+            <span className="text-xs font-semibold text-[var(--primary)] whitespace-nowrap">
               {sectionCaption}
             </span>
-            <ArrowRight size={14} className="text-[var(--accent)] era-callout-arrow" />
-            {/* tail */}
-            <span
-              aria-hidden
-              className="absolute left-0 bottom-0 -translate-x-1.5 translate-y-1 w-3 h-3 bg-white border-l border-b border-[var(--border)] rotate-45"
-            />
+            <ArrowRight size={12} className="text-[var(--accent)] era-callout-arrow" />
           </div>
 
           <div
             className="era-gesture"
             style={{ transform: gestureTransform, transition: "transform 0.6s cubic-bezier(.4,1.4,.6,1)" }}
           >
-            <ERAAvatar size={440} speaking={speaking} listening={listening} />
+            <ERAAvatar size={280} speaking={speaking} listening={listening} />
           </div>
         </div>
-        <div className="mt-6 text-center">
+        <div className="-mt-1 text-center">
           <div className="flex items-center justify-center gap-3">
-            <h2 className="font-display font-black text-4xl text-[var(--primary)]">ERA</h2>
+            <h2 className="font-display font-black text-2xl text-[var(--primary)]">ERA</h2>
             <span
               className={`era-waves text-[var(--accent)] ${speaking ? "active" : ""}`}
               aria-hidden
@@ -112,10 +107,10 @@ export const ERAPanel = () => {
               <span /><span /><span /><span /><span />
             </span>
           </div>
-          <div className="text-sm text-[var(--text-secondary)] mt-1">{t("era_role")}</div>
+          <div className="text-xs text-[var(--text-secondary)] mt-0.5">{t("era_role")}</div>
           <div
             data-testid="era-panel-status"
-            className={`mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold transition-colors ${
               streaming
                 ? "bg-[var(--accent)]/10 text-[var(--accent)]"
                 : listening
@@ -153,14 +148,14 @@ export const ERAPanel = () => {
       </div>
 
       {/* Latest message caption bubble */}
-      <div className="relative z-10 px-8 pb-4">
+      <div className="relative z-10 px-4 pt-3 pb-2 flex-1 min-h-0">
         <div
           ref={scrollRef}
           data-testid="era-panel-messages"
-          className="max-h-56 overflow-y-auto rounded-2xl bg-white/60 backdrop-blur border border-white/70 p-4 space-y-3 shadow-sm"
+          className="h-full max-h-64 overflow-y-auto rounded-2xl bg-white/60 backdrop-blur border border-white/70 p-3 space-y-2 shadow-sm"
         >
           {messages.slice(-4).map((m, i) => (
-            <div key={i} className={`text-sm ${m.role === "user" ? "text-[var(--primary)]" : "text-[var(--text-primary)]"}`}>
+            <div key={i} className={`text-xs leading-relaxed ${m.role === "user" ? "text-[var(--primary)]" : "text-[var(--text-primary)]"}`}>
               <span
                 className={`inline-block px-3 py-1.5 rounded-xl ${
                   m.role === "user"
@@ -184,13 +179,13 @@ export const ERAPanel = () => {
       {/* Input row */}
       <form
         onSubmit={handleSubmit}
-        className="relative z-10 flex items-center gap-2 px-8 pb-8 pt-2"
+        className="relative z-10 grid grid-cols-[40px_minmax(0,1fr)_40px_40px] items-center gap-2 px-4 pb-5 pt-2"
       >
         <button
           type="button"
           data-testid="era-panel-mic"
           onClick={toggleListen}
-          className={`h-11 w-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
+          className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors shadow-sm ${
             listening
               ? "bg-[var(--danger)] text-white"
               : "bg-white text-[var(--primary)] border border-[var(--border)] hover:bg-gray-50"
@@ -204,7 +199,7 @@ export const ERAPanel = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={t("era_input_placeholder")}
-          className="flex-1 h-11 px-4 rounded-full bg-white border border-[var(--border)] text-sm outline-none focus:border-[var(--accent)] transition-colors shadow-sm"
+          className="min-w-0 h-10 px-3 rounded-full bg-white border border-[var(--border)] text-xs outline-none focus:border-[var(--accent)] transition-colors shadow-sm"
         />
         <button
           type="button"
@@ -213,7 +208,7 @@ export const ERAPanel = () => {
             setVoiceEnabled(!voiceEnabled);
             if (voiceEnabled) window.speechSynthesis?.cancel();
           }}
-          className="h-11 w-11 rounded-full bg-white border border-[var(--border)] flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
+          className="h-10 w-10 rounded-full bg-white border border-[var(--border)] flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
         >
           {voiceEnabled ? (
             <Volume2 size={16} className="text-[var(--primary)]" />
@@ -225,7 +220,7 @@ export const ERAPanel = () => {
           type="submit"
           data-testid="era-panel-send"
           disabled={!input.trim() || streaming}
-          className="h-11 w-11 rounded-full bg-[var(--primary)] text-white flex items-center justify-center disabled:opacity-40 hover:bg-[var(--accent)] transition-colors shadow-sm"
+          className="h-10 w-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center disabled:opacity-40 hover:bg-[var(--accent)] transition-colors shadow-sm"
         >
           <Send size={16} />
         </button>
