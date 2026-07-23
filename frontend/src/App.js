@@ -8,6 +8,7 @@ import { AIAgent } from "@/components/AIAgent";
 import Dashboard from "@/pages/Dashboard";
 import Objectives from "@/pages/Objectives";
 import Products from "@/pages/Products";
+import { LanguageProvider } from "@/lib/language";
 
 const PAGE_META = {
   "/": { title: "Portfolio Overview", subtitle: "Dashboard" },
@@ -39,10 +40,12 @@ const Shell = () => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Shell />
-      <Toaster position="top-right" richColors />
-    </BrowserRouter>
+    <LanguageProvider>
+      <BrowserRouter>
+        <Shell />
+        <Toaster position="top-right" richColors />
+      </BrowserRouter>
+    </LanguageProvider>
   );
 }
 

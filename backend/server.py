@@ -86,6 +86,7 @@ class QuestionnaireResult(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     session_id: str
+    language: Optional[str] = "English"
     portfolio_context: Optional[dict] = None
 
 
@@ -300,6 +301,13 @@ async def chat_stream(req: ChatRequest):
         "When discussing the user's portfolio, use the context provided. "
         "Be conversational since your response may be spoken aloud."
     )
+    if req.language and req.language.lower() not in ("english", "en"):
+        system_msg += (
+            f"\n\nIMPORTANT: Respond ONLY in {req.language}. "
+            f"Use natural, native-sounding phrasing of a fluent {req.language} speaker. "
+            "Even if the user writes in another language, always reply in "
+            f"{req.language}."
+        )
     if req.portfolio_context:
         system_msg += f"\n\nUser portfolio context: {req.portfolio_context}"
 

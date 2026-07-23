@@ -1,4 +1,60 @@
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, ChevronDown, Globe } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { LANGS, useLanguage } from "../lib/language";
+
+const LangSelector = () => {
+  const { code, short, setCode, label } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const onDoc = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        data-testid="lang-selector-btn"
+        onClick={() => setOpen((v) => !v)}
+        className="h-10 pl-3 pr-2.5 rounded-full border border-[var(--border)] bg-white flex items-center gap-1.5 text-sm font-medium text-[var(--primary)] hover:bg-gray-50 transition-colors"
+        aria-label={`Language: ${label}`}
+      >
+        <Globe size={14} className="text-[var(--text-secondary)]" />
+        <span className="font-mono-num">{short}</span>
+        <ChevronDown size={13} className={`text-[var(--text-secondary)] transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div
+          data-testid="lang-selector-menu"
+          className="absolute right-0 mt-2 w-44 rounded-xl border border-[var(--border)] bg-white shadow-lg overflow-hidden z-30"
+        >
+          {LANGS.map((l) => (
+            <button
+              key={l.code}
+              data-testid={`lang-option-${l.code}`}
+              onClick={() => {
+                setCode(l.code);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2.5 flex items-center justify-between text-sm transition-colors ${
+                l.code === code
+                  ? "bg-[var(--accent)]/10 text-[var(--accent)] font-semibold"
+                  : "text-[var(--primary)] hover:bg-gray-50"
+              }`}
+            >
+              <span>{l.label}</span>
+              <span className="text-[10px] tracking-widest font-mono-num text-[var(--text-secondary)]">{l.short}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const TopHeader = ({ title, subtitle }) => {
   return (
@@ -23,6 +79,7 @@ export const TopHeader = ({ title, subtitle }) => {
             className="bg-transparent outline-none flex-1 text-[var(--text-primary)]"
           />
         </div>
+        <LangSelector />
         <button
           data-testid="notifications-btn"
           className="h-10 w-10 rounded-full border border-[var(--border)] bg-white flex items-center justify-center hover:bg-gray-50 transition-colors"

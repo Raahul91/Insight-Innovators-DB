@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Send, X, Volume2, VolumeX } from "lucide-react";
 import { API } from "../lib/api";
+import { useLanguage } from "../lib/language";
 
 const ARIA_FACE =
   "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=srgb&fm=jpg&w=240&h=240&fit=crop&q=80";
@@ -17,14 +18,9 @@ const getSessionId = () => {
 };
 
 export const AIAgent = ({ portfolioContext }) => {
+  const { code: langCode, label: langLabel, locale, t } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content:
-        "Hi, I'm ERA — your European Relationship Assistant. I can walk you through the questionnaire, explain any question in plain language, and suggest which answer fits your situation best. Tap the mic and just talk to me, or type below.",
-    },
-  ]);
+  const [messages, setMessages] = useState([{ role: "assistant", content: t("era_intro") }]);
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -34,14 +30,25 @@ export const AIAgent = ({ portfolioContext }) => {
   const scrollRef = useRef(null);
   const sessionId = useRef(getSessionId()).current;
 
-  // Setup SpeechRecognition
+  // Update intro message when language changes (only if only the intro is in the log)
+  useEffect(() => {
+    setMessages((m) => {
+      if (m.length === 1 && m[0].role === "assistant") {
+        return [{ role: "assistant", content: t("era_intro") }];
+      }
+      return m;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [langCode]);
+
+  // Update recognition language
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
     const rec = new SR();
     rec.continuous = false;
     rec.interimResults = false;
-    rec.lang = "en-US";
+    rec.lang = locale;
     rec.onresult = (e) => {
       const text = e.results[0][0].transcript;
       setInput(text);
@@ -51,7 +58,8 @@ export const AIAgent = ({ portfolioContext }) => {
     rec.onend = () => setListening(false);
     rec.onerror = () => setListening(false);
     recognitionRef.current = rec;
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -59,24 +67,23 @@ export const AIAgent = ({ portfolioContext }) => {
     }
   }, [messages, streaming]);
 
-  // Expose a global helper so any page (like the Objectives wizard) can
-  // ask Aria to explain something and auto-open the panel.
+  // Broadcast streaming status so other pages can show "ERA is helping…"
   useEffect(() => {
-    window.askAria = (prompt) => {
-      setOpen(true);
-      setTimeout(() => sendMessage(prompt), 250);
-    };
-    return () => {
-      delete window.askAria;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streaming]);
+    window.dispatchEvent(
+      new CustomEvent("era-status", { detail: { streaming, speaking } }),
+    );
+  }, [streaming, speaking]);
 
   const speak = (text) => {
     if (!voiceEnabled || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
-    utter.rate = 1.05;
+    utter.lang = locale;
+    // Try to pick a matching voice for the locale
+    const voices = window.speechSynthesis.getVoices();
+    const match = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith(locale.toLowerCase().split("-")[0]));
+    if (match) utter.voice = match;
+    utter.rate = 1.02;
     utter.pitch = 1;
     utter.onstart = () => setSpeaking(true);
     utter.onend = () => setSpeaking(false);
@@ -91,6 +98,7 @@ export const AIAgent = ({ portfolioContext }) => {
     } else {
       try {
         window.speechSynthesis?.cancel();
+        recognitionRef.current.lang = locale;
         recognitionRef.current.start();
         setListening(true);
       } catch (_) {
@@ -113,6 +121,7 @@ export const AIAgent = ({ portfolioContext }) => {
         body: JSON.stringify({
           message: text,
           session_id: sessionId,
+          language: langLabel,
           portfolio_context: portfolioContext || null,
         }),
       });
@@ -134,7 +143,7 @@ export const AIAgent = ({ portfolioContext }) => {
           const payload = line.slice(5).replace(/^\s/, "");
           if (payload === "[DONE]") continue;
           if (payload.startsWith("[error]")) {
-            full += "\n(Error contacting Aria.)";
+            full += "\n(Error contacting ERA.)";
           } else {
             full += payload;
           }
@@ -149,13 +158,32 @@ export const AIAgent = ({ portfolioContext }) => {
     } catch (e) {
       setMessages((m) => {
         const copy = [...m];
-        copy[copy.length - 1] = { role: "assistant", content: "Sorry, I couldn't reach the server." };
+        copy[copy.length - 1] = { role: "assistant", content: "…" };
         return copy;
       });
     } finally {
       setStreaming(false);
     }
   };
+
+  // Expose global helpers so any page can trigger ERA
+  useEffect(() => {
+    window.askERA = (prompt) => {
+      setOpen(true);
+      setTimeout(() => sendMessage(prompt), 250);
+    };
+    window.eraGreet = (text) => {
+      // Local greeting: no backend, just show + speak
+      setOpen(true);
+      setMessages((m) => [...m, { role: "assistant", content: text }]);
+      setTimeout(() => speak(text), 300);
+    };
+    return () => {
+      delete window.askERA;
+      delete window.eraGreet;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streaming, locale, voiceEnabled]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -164,7 +192,6 @@ export const AIAgent = ({ portfolioContext }) => {
 
   return (
     <>
-      {/* Floating Toggle - Human face */}
       <button
         data-testid="ai-agent-toggle"
         onClick={() => setOpen((v) => !v)}
@@ -196,7 +223,6 @@ export const AIAgent = ({ portfolioContext }) => {
             data-testid="ai-agent-panel"
             className="fixed bottom-28 right-6 z-40 w-[380px] max-w-[calc(100vw-32px)] h-[560px] max-h-[calc(100vh-140px)] glass-panel rounded-2xl overflow-hidden flex flex-col"
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
               <div className="flex items-center gap-3">
                 <div
@@ -209,13 +235,7 @@ export const AIAgent = ({ portfolioContext }) => {
                 <div>
                   <div className="font-display font-bold text-[var(--primary)] leading-tight">ERA</div>
                   <div className="text-xs text-[var(--text-secondary)]">
-                    {streaming
-                      ? "Thinking…"
-                      : listening
-                      ? "Listening…"
-                      : speaking
-                      ? "Speaking…"
-                      : "European Relationship Assistant"}
+                    {streaming ? "…" : listening ? "◉ live" : speaking ? "♪" : t("era_role")}
                   </div>
                 </div>
               </div>
@@ -245,19 +265,15 @@ export const AIAgent = ({ portfolioContext }) => {
               </div>
             </div>
 
-            {/* Messages */}
             <div
               ref={scrollRef}
               className="flex-1 overflow-y-auto px-5 py-4 space-y-3"
               data-testid="ai-agent-messages"
             >
               {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                >
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                       m.role === "user"
                         ? "bg-[var(--primary)] text-white rounded-br-sm"
                         : "bg-white/85 border border-white/60 text-[var(--text-primary)] rounded-bl-sm"
@@ -275,7 +291,6 @@ export const AIAgent = ({ portfolioContext }) => {
               ))}
             </div>
 
-            {/* Input */}
             <form
               onSubmit={handleSubmit}
               className="flex items-center gap-2 px-4 py-3 border-t border-white/40 bg-white/40"
@@ -297,7 +312,7 @@ export const AIAgent = ({ portfolioContext }) => {
                 data-testid="ai-agent-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask ERA about your portfolio…"
+                placeholder={t("era_input_placeholder")}
                 className="flex-1 h-10 px-4 rounded-full bg-white border border-[var(--border)] text-sm outline-none focus:border-[var(--accent)] transition-colors"
               />
               <button

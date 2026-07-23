@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchQuestions, submitQuestionnaire } from "../lib/api";
 import { CheckCircle2, ChevronLeft, ChevronRight, RotateCcw, HelpCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "../lib/language";
 
 const HORIZON_COLORS = {
   "Short-term": "#F59E0B",
@@ -10,15 +11,47 @@ const HORIZON_COLORS = {
 };
 
 export default function Objectives() {
+  const { t } = useLanguage();
   const [questions, setQuestions] = useState([]);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [eraStreaming, setEraStreaming] = useState(false);
+  const [greetedResult, setGreetedResult] = useState(false);
 
   useEffect(() => {
     fetchQuestions().then((data) => setQuestions(data.questions));
   }, []);
+
+  // Auto-greet on landing (once per mount)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (typeof window.eraGreet === "function") {
+        window.eraGreet(t("greet_objectives"));
+      }
+    }, 900);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen to ERA streaming/speaking status
+  useEffect(() => {
+    const handler = (e) => setEraStreaming(!!(e.detail?.streaming || e.detail?.speaking));
+    window.addEventListener("era-status", handler);
+    return () => window.removeEventListener("era-status", handler);
+  }, []);
+
+  // When result arrives, ask ERA to speak a summary once
+  useEffect(() => {
+    if (result && !greetedResult && typeof window.askERA === "function") {
+      setGreetedResult(true);
+      const alloc = result.allocation_suggestion.map((a) => `${a.category} ${a.percentage}%`).join(", ");
+      const prompt = `${t("era_result_summary_prompt")}\n\nAssessment result:\n- Horizon: ${result.horizon}\n- Risk profile: ${result.risk_profile}\n- Score: ${result.total_score}/20\n- Suggested allocation: ${alloc}`;
+      setTimeout(() => window.askERA(prompt), 700);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
 
   const currentQ = questions[step];
   const total = questions.length;
@@ -72,6 +105,18 @@ export default function Objectives() {
               <div className="text-xs tracking-[0.2em] uppercase text-[var(--text-secondary)]">
                 Assessment complete
               </div>
+              {eraStreaming && (
+                <span
+                  data-testid="era-result-status"
+                  className="ml-auto inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-xs font-semibold"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-60" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--accent)]" />
+                  </span>
+                  {t("era_status_summary")}
+                </span>
+              )}
             </div>
             <h2 className="font-display font-black text-3xl md:text-4xl text-[var(--primary)] mb-2">
               Your recommended horizon
@@ -195,7 +240,7 @@ export default function Objectives() {
               }}
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-xs font-semibold hover:bg-[var(--accent)]/20 transition-colors"
             >
-              <HelpCircle size={13} /> Ask ERA to explain
+              <HelpCircle size={13} /> {t("ask_era_explain")}
             </button>
             <button
               type="button"
@@ -209,8 +254,20 @@ export default function Objectives() {
               }}
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--border)] bg-white text-[var(--primary)] text-xs font-semibold hover:bg-gray-50 transition-colors"
             >
-              <Sparkles size={13} /> Help me answer this
+              <Sparkles size={13} /> {t("help_me_answer")}
             </button>
+            {eraStreaming && (
+              <span
+                data-testid="era-status-badge"
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--success)]/10 text-[var(--success)] text-xs font-semibold"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success)] opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--success)]" />
+                </span>
+                {t("era_status_helping")}
+              </span>
+            )}
           </div>
 
           <div className="space-y-3">
