@@ -28,6 +28,9 @@ export const STRINGS = {
       "Give the user a warm, one-sentence spoken welcome to the Financial Objectives questionnaire and remind them that I can explain any question if they need.",
     era_result_summary_prompt:
       "Give the user a warm, 2-3 sentence spoken summary of their assessment result. Mention the horizon, risk profile and one key portfolio takeaway. Do not repeat the numbers verbatim.",
+    section_dashboard: "Here's your portfolio",
+    section_objectives: "Let's set your goals",
+    section_products: "Explore investments",
   },
   de: {
     era_intro:
@@ -48,6 +51,9 @@ export const STRINGS = {
       "Begrüße den Nutzer in einem warmen, kurzen Satz zum Fragebogen 'Finanzielle Ziele' und erinnere daran, dass du jede Frage erklären kannst.",
     era_result_summary_prompt:
       "Gib dem Nutzer eine warme, 2-3 Sätze lange gesprochene Zusammenfassung seines Ergebnisses (Anlagehorizont, Risikoprofil, ein wichtiger Portfolio-Tipp). Wiederhole keine Zahlen wortwörtlich.",
+    section_dashboard: "Hier ist dein Portfolio",
+    section_objectives: "Definieren wir deine Ziele",
+    section_products: "Entdecke Investments",
   },
   fr: {
     era_intro:
@@ -68,6 +74,9 @@ export const STRINGS = {
       "Souhaitez la bienvenue à l'utilisateur en une phrase chaleureuse pour le questionnaire 'Objectifs financiers' et rappelez que vous pouvez expliquer chaque question.",
     era_result_summary_prompt:
       "Donnez à l'utilisateur un résumé oral chaleureux de 2-3 phrases de son résultat (horizon, profil de risque, un conseil clé). Ne répétez pas les chiffres mot pour mot.",
+    section_dashboard: "Voici votre portefeuille",
+    section_objectives: "Définissons vos objectifs",
+    section_products: "Explorez les investissements",
   },
   es: {
     era_intro:
@@ -88,6 +97,9 @@ export const STRINGS = {
       "Da la bienvenida al usuario en una frase cálida al cuestionario de 'Objetivos financieros' y recuérdale que puedes explicar cualquier pregunta.",
     era_result_summary_prompt:
       "Ofrece al usuario un resumen oral cálido de 2-3 frases de su resultado (horizonte, perfil de riesgo y una recomendación clave). No repitas los números literalmente.",
+    section_dashboard: "Aquí está tu cartera",
+    section_objectives: "Definamos tus objetivos",
+    section_products: "Explora las inversiones",
   },
   it: {
     era_intro:

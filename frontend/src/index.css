@@ -146,6 +146,22 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+/* Section callout animation — small pop when route changes */
+.era-callout {
+  animation: era-callout-in 0.55s cubic-bezier(.2, 1.4, .5, 1) both;
+}
+@keyframes era-callout-in {
+  0% { opacity: 0; transform: translateX(120%) scale(0.7); }
+  100% { opacity: 1; transform: translateX(100%) scale(1); }
+}
+.era-callout-arrow {
+  animation: era-arrow-nudge 1.6s ease-in-out infinite;
+}
+@keyframes era-arrow-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+
 /* Sound-wave bars used in chat panel header */
 .era-waves {
   display: inline-flex;

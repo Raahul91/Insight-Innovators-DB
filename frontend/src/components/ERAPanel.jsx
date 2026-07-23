@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Mic, MicOff, Send, Volume2, VolumeX } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { Mic, MicOff, Send, Volume2, VolumeX, ArrowRight } from "lucide-react";
 import { ERAAvatar } from "./ERAAvatar";
 import { useERA } from "./ERAContext";
 
@@ -21,6 +22,21 @@ export const ERAPanel = () => {
     toggleListen,
     t,
   } = useERA();
+
+  const location = useLocation();
+  const sectionKey =
+    location.pathname === "/objectives"
+      ? "objectives"
+      : location.pathname === "/products"
+      ? "products"
+      : "dashboard";
+  const sectionCaption = t(`section_${sectionKey}`);
+  // Different body tilts per section to make ERA feel like she's pointing/gesturing
+  const gestureTransform = {
+    dashboard: "rotate(-4deg) translateY(-4px)",
+    objectives: "rotate(3deg) translateY(0px)",
+    products: "rotate(6deg) translateY(4px)",
+  }[sectionKey];
 
   const scrollRef = useRef(null);
   useEffect(() => {
@@ -61,7 +77,31 @@ export const ERAPanel = () => {
 
       {/* Big Avatar centered — freestanding character */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8">
-        <ERAAvatar size={340} speaking={speaking} listening={listening} />
+        <div className="relative" data-testid="era-gesture-wrap">
+          {/* Speech-bubble callout pointing to the active section */}
+          <div
+            key={sectionKey}
+            data-testid={`era-callout-${sectionKey}`}
+            className="absolute -right-8 top-6 translate-x-full inline-flex items-center gap-2 pl-4 pr-3 py-2 rounded-2xl rounded-bl-none bg-white border border-[var(--border)] shadow-md era-callout"
+          >
+            <span className="text-sm font-semibold text-[var(--primary)] whitespace-nowrap">
+              {sectionCaption}
+            </span>
+            <ArrowRight size={14} className="text-[var(--accent)] era-callout-arrow" />
+            {/* tail */}
+            <span
+              aria-hidden
+              className="absolute left-0 bottom-0 -translate-x-1.5 translate-y-1 w-3 h-3 bg-white border-l border-b border-[var(--border)] rotate-45"
+            />
+          </div>
+
+          <div
+            className="era-gesture"
+            style={{ transform: gestureTransform, transition: "transform 0.6s cubic-bezier(.4,1.4,.6,1)" }}
+          >
+            <ERAAvatar size={340} speaking={speaking} listening={listening} />
+          </div>
+        </div>
         <div className="mt-6 text-center">
           <div className="flex items-center justify-center gap-3">
             <h2 className="font-display font-black text-4xl text-[var(--primary)]">ERA</h2>
