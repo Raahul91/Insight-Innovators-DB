@@ -1,10 +1,9 @@
 from fastapi import FastAPI, APIRouter, HTTPException
-from fastapi.responses import StreamingResponse, Response
+from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
-import io
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -13,15 +12,6 @@ import uuid
 from datetime import datetime, timezone
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
-
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import mm
-from reportlab.lib import colors
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
-)
-from reportlab.lib.enums import TA_LEFT, TA_JUSTIFY
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -86,7 +76,6 @@ class QuestionnaireSubmission(BaseModel):
 
 
 class QuestionnaireResult(BaseModel):
-    submission_id: Optional[str] = None
     total_score: int
     horizon: Literal["Short-term", "Medium-term", "Long-term"]
     risk_profile: Literal["Conservative", "Balanced", "Aggressive"]
@@ -287,11 +276,9 @@ async def get_questions():
 @api_router.post("/questionnaire/submit", response_model=QuestionnaireResult)
 async def submit_questionnaire(sub: QuestionnaireSubmission):
     result = compute_questionnaire(sub.answers)
-    submission_id = str(uuid.uuid4())
-    result.submission_id = submission_id
     # Save to db
     doc = {
-        "id": submission_id,
+        "id": str(uuid.uuid4()),
         "session_id": sub.session_id or str(uuid.uuid4()),
         "answers": [a.model_dump() for a in sub.answers],
         "result": result.model_dump(),
@@ -299,193 +286,6 @@ async def submit_questionnaire(sub: QuestionnaireSubmission):
     }
     await db.questionnaire_submissions.insert_one(doc)
     return result
-
-
-def _build_suitability_pdf(submission: dict) -> bytes:
-    """Generate a MiFID II Suitability Statement PDF for a stored submission."""
-    result = submission["result"]
-    answers = submission["answers"]
-    ts = submission.get("timestamp", datetime.now(timezone.utc).isoformat())
-    try:
-        date_str = datetime.fromisoformat(ts).strftime("%d %B %Y")
-    except Exception:
-        date_str = ts
-
-    # Build a mapping of question text
-    q_map = {q["id"]: q for q in QUESTIONS}
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buf, pagesize=A4,
-        rightMargin=20 * mm, leftMargin=20 * mm,
-        topMargin=18 * mm, bottomMargin=18 * mm,
-        title="MiFID II Suitability Statement",
-        author="Meridian EU Wealth OS",
-    )
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name="H1EU", fontName="Helvetica-Bold", fontSize=22, leading=26, textColor=colors.HexColor("#0A2540"), spaceAfter=6))
-    styles.add(ParagraphStyle(name="H2EU", fontName="Helvetica-Bold", fontSize=12, leading=16, textColor=colors.HexColor("#0A2540"), spaceBefore=14, spaceAfter=6))
-    styles.add(ParagraphStyle(name="MetaEU", fontName="Helvetica", fontSize=9, leading=12, textColor=colors.HexColor("#4B5563")))
-    styles.add(ParagraphStyle(name="BodyEU", fontName="Helvetica", fontSize=10, leading=14, textColor=colors.HexColor("#111827"), alignment=TA_JUSTIFY))
-    styles.add(ParagraphStyle(name="SmallEU", fontName="Helvetica", fontSize=8, leading=11, textColor=colors.HexColor("#4B5563")))
-
-    story = []
-    story.append(Paragraph("MERIDIAN · EU Wealth OS", styles["MetaEU"]))
-    story.append(Paragraph("MiFID II Suitability Statement", styles["H1EU"]))
-    story.append(Paragraph(
-        f"Reference: {submission['id'][:8].upper()} &nbsp;&nbsp;·&nbsp;&nbsp; Date: {date_str}",
-        styles["MetaEU"],
-    ))
-    story.append(Spacer(1, 10))
-
-    # Client block
-    client_tbl = Table(
-        [
-            [Paragraph("<b>Client</b>", styles["SmallEU"]), Paragraph("Elena Marchetti (Premium Client)", styles["BodyEU"])],
-            [Paragraph("<b>Firm</b>", styles["SmallEU"]), Paragraph("Meridian EU Wealth OS (sample)", styles["BodyEU"])],
-            [Paragraph("<b>Regulatory basis</b>", styles["SmallEU"]), Paragraph("Directive 2014/65/EU (MiFID II), Article 25(2) — assessment of suitability", styles["BodyEU"])],
-        ],
-        colWidths=[35 * mm, None],
-    )
-    client_tbl.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    story.append(client_tbl)
-
-    # Intro
-    story.append(Paragraph("1. Purpose", styles["H2EU"]))
-    story.append(Paragraph(
-        "This statement summarises the suitability assessment carried out in accordance with Article 25(2) of Directive 2014/65/EU "
-        "(MiFID II) and Articles 54–55 of Commission Delegated Regulation (EU) 2017/565. It records the client's investment objectives, "
-        "risk tolerance and knowledge & experience as declared through the on-platform questionnaire, and sets out the resulting "
-        "recommended investment horizon and target asset allocation.",
-        styles["BodyEU"],
-    ))
-
-    # Assessment answers
-    story.append(Paragraph("2. Client responses", styles["H2EU"]))
-    rows = [["#", "Question", "Response", "Score"]]
-    for i, a in enumerate(answers, 1):
-        q = q_map.get(a["question_id"])
-        if not q:
-            continue
-        chosen = next((o["label"] for o in q["options"] if o["value"] == a["value"]), str(a["value"]))
-        rows.append([
-            str(i),
-            Paragraph(q["text"], styles["BodyEU"]),
-            Paragraph(chosen, styles["BodyEU"]),
-            str(a["value"]),
-        ])
-    q_tbl = Table(rows, colWidths=[8 * mm, 75 * mm, 65 * mm, 12 * mm])
-    q_tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F3F4F6")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0A2540")),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#E5E7EB")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
-    story.append(q_tbl)
-
-    # Result summary
-    story.append(Paragraph("3. Suitability outcome", styles["H2EU"]))
-    outcome = Table(
-        [
-            [Paragraph("<b>Total score</b>", styles["BodyEU"]), Paragraph(f"{result['total_score']} / 20", styles["BodyEU"])],
-            [Paragraph("<b>Risk profile</b>", styles["BodyEU"]), Paragraph(result["risk_profile"], styles["BodyEU"])],
-            [Paragraph("<b>Recommended horizon</b>", styles["BodyEU"]), Paragraph(result["horizon"], styles["BodyEU"])],
-        ],
-        colWidths=[45 * mm, None],
-    )
-    outcome.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F8F9FA")),
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#E5E7EB")),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
-    story.append(outcome)
-    story.append(Spacer(1, 8))
-    story.append(Paragraph(result["recommendation"], styles["BodyEU"]))
-
-    # Allocation
-    story.append(Paragraph("4. Recommended target allocation", styles["H2EU"]))
-    alloc_rows = [["Asset class", "Target weight"]]
-    for a in result["allocation_suggestion"]:
-        alloc_rows.append([a["category"], f"{a['percentage']} %"])
-    alloc_tbl = Table(alloc_rows, colWidths=[80 * mm, 40 * mm])
-    alloc_tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F3F4F6")),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#E5E7EB")),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    story.append(alloc_tbl)
-
-    # Disclosures
-    story.append(Paragraph("5. Important information", styles["H2EU"]))
-    story.append(Paragraph(
-        "The recommendation above is based solely on the information you provided. Past performance is not a reliable indicator of "
-        "future results. All investments carry risk, including the possible loss of the amount invested. Products discussed are "
-        "UCITS-compliant unless otherwise stated. Crypto-assets referenced are subject to Regulation (EU) 2023/1114 (MiCA).",
-        styles["BodyEU"],
-    ))
-    story.append(Spacer(1, 6))
-    story.append(Paragraph(
-        "Please inform us without undue delay of any material change in your financial situation, objectives or knowledge, so that this "
-        "assessment can be updated in accordance with Article 54(7) of Delegated Regulation (EU) 2017/565.",
-        styles["BodyEU"],
-    ))
-
-    story.append(Spacer(1, 20))
-    story.append(Paragraph("Client acknowledgement", styles["H2EU"]))
-    sig_tbl = Table(
-        [["", ""], [Paragraph("Client signature", styles["SmallEU"]), Paragraph("Date", styles["SmallEU"])]],
-        colWidths=[85 * mm, 55 * mm],
-    )
-    sig_tbl.setStyle(TableStyle([
-        ("LINEABOVE", (0, 1), (0, 1), 0.6, colors.HexColor("#111827")),
-        ("LINEABOVE", (1, 1), (1, 1), 0.6, colors.HexColor("#111827")),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 24),
-    ]))
-    story.append(sig_tbl)
-
-    story.append(Spacer(1, 14))
-    story.append(Paragraph(
-        f"This document was generated by Meridian EU Wealth OS on {date_str}. Reference: {submission['id']}.",
-        styles["SmallEU"],
-    ))
-
-    doc.build(story)
-    return buf.getvalue()
-
-
-@api_router.get("/questionnaire/suitability/{submission_id}")
-async def download_suitability(submission_id: str):
-    submission = await db.questionnaire_submissions.find_one(
-        {"id": submission_id}, {"_id": 0}
-    )
-    if not submission:
-        raise HTTPException(status_code=404, detail="Submission not found")
-    pdf_bytes = _build_suitability_pdf(submission)
-    filename = f"suitability-{submission_id[:8]}.pdf"
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
 
 
 @api_router.post("/chat/stream")
