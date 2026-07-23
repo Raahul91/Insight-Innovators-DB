@@ -1,0 +1,19 @@
+{
+  "customerProfile": {
+    "riskAppetite": "MODERATE",
+    "knowledge": "INTERMEDIATE",
+    "experience": "5 years",
+    "esgPreference": "HIGH"
+  },
+  "order": {
+    "instrumentId": "ETF-101",
+    "instrumentName": "European Technology ETF",
+    "action": "BUY",
+    "quantity": 100
+  },
+  "marketContext": {
+    "news": ["Technology sector down 2%"],
+    "ipoNews": ["Major IPO launched"],
+    "geopoliticalEvents": ["War tensions increasing"]
+  }
+}
