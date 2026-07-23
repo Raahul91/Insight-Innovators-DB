@@ -6,7 +6,7 @@ import { API } from "../lib/api";
 const ARIA_FACE =
   "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=srgb&fm=jpg&w=240&h=240&fit=crop&q=80";
 
-const SESSION_KEY = "aria-session-id";
+const SESSION_KEY = "era-session-id";
 const getSessionId = () => {
   let s = localStorage.getItem(SESSION_KEY);
   if (!s) {
@@ -22,7 +22,7 @@ export const AIAgent = ({ portfolioContext }) => {
     {
       role: "assistant",
       content:
-        "Hi, I'm Aria — your EU investment advisor. I can walk you through the questionnaire, explain any question in plain language, and suggest which answer fits your situation best. Tap the mic and just talk to me, or type below.",
+        "Hi, I'm ERA — your European Relationship Assistant. I can walk you through the questionnaire, explain any question in plain language, and suggest which answer fits your situation best. Tap the mic and just talk to me, or type below.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -169,7 +169,7 @@ export const AIAgent = ({ portfolioContext }) => {
         data-testid="ai-agent-toggle"
         onClick={() => setOpen((v) => !v)}
         className="fixed bottom-6 right-6 z-40 group"
-        aria-label="Open AI agent"
+        aria-label="Open ERA assistant"
       >
         <div
           className={`relative h-16 w-16 rounded-full overflow-hidden ring-4 ring-white shadow-xl ${
@@ -178,7 +178,7 @@ export const AIAgent = ({ portfolioContext }) => {
         >
           <img
             src={ARIA_FACE}
-            alt="Aria - AI Advisor"
+            alt="ERA - European Relationship Assistant"
             className="h-full w-full object-cover"
             draggable={false}
           />
@@ -204,10 +204,10 @@ export const AIAgent = ({ portfolioContext }) => {
                     speaking ? "orb-pulse" : ""
                   }`}
                 >
-                  <img src={ARIA_FACE} alt="Aria" className="h-full w-full object-cover" />
+                  <img src={ARIA_FACE} alt="ERA" className="h-full w-full object-cover" />
                 </div>
                 <div>
-                  <div className="font-display font-bold text-[var(--primary)] leading-tight">Aria Bennett</div>
+                  <div className="font-display font-bold text-[var(--primary)] leading-tight">ERA</div>
                   <div className="text-xs text-[var(--text-secondary)]">
                     {streaming
                       ? "Thinking…"
@@ -215,7 +215,7 @@ export const AIAgent = ({ portfolioContext }) => {
                       ? "Listening…"
                       : speaking
                       ? "Speaking…"
-                      : "EU Investment Advisor"}
+                      : "European Relationship Assistant"}
                   </div>
                 </div>
               </div>
@@ -297,7 +297,7 @@ export const AIAgent = ({ portfolioContext }) => {
                 data-testid="ai-agent-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Aria about your portfolio…"
+                placeholder="Ask ERA about your portfolio…"
                 className="flex-1 h-10 px-4 rounded-full bg-white border border-[var(--border)] text-sm outline-none focus:border-[var(--accent)] transition-colors"
               />
               <button

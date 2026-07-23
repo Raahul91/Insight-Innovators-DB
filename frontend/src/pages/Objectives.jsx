@@ -187,15 +187,15 @@ export default function Objectives() {
               onClick={() => {
                 const optList = currentQ.options.map((o) => `- "${o.label}"`).join("\n");
                 const prompt = `I'm on the "Financial Objectives" questionnaire. Please explain this question in plain, friendly language for a European retail investor, and tell me what each answer choice implies so I can pick the one that best fits me.\n\nQuestion: ${currentQ.text}\n\nAnswer choices:\n${optList}`;
-                if (typeof window.askAria === "function") {
-                  window.askAria(prompt);
+                if (typeof window.askERA === "function") {
+                  window.askERA(prompt);
                 } else {
-                  toast.info("AI advisor is loading, please try again in a moment.");
+                  toast.info("ERA is loading, please try again in a moment.");
                 }
               }}
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-xs font-semibold hover:bg-[var(--accent)]/20 transition-colors"
             >
-              <HelpCircle size={13} /> Ask Aria to explain
+              <HelpCircle size={13} /> Ask ERA to explain
             </button>
             <button
               type="button"
@@ -203,8 +203,8 @@ export default function Objectives() {
               onClick={() => {
                 const optList = currentQ.options.map((o) => `- "${o.label}"`).join("\n");
                 const prompt = `I'm not sure which answer to pick for this questionnaire question. Ask me one or two short, friendly questions to figure out my situation, then recommend which of the choices fits me best.\n\nQuestion: ${currentQ.text}\n\nAnswer choices:\n${optList}`;
-                if (typeof window.askAria === "function") {
-                  window.askAria(prompt);
+                if (typeof window.askERA === "function") {
+                  window.askERA(prompt);
                 }
               }}
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--border)] bg-white text-[var(--primary)] text-xs font-semibold hover:bg-gray-50 transition-colors"

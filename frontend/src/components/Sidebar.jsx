@@ -53,13 +53,13 @@ export const Sidebar = () => {
         <div className="flex items-center gap-3 mb-2">
           <img
             src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=srgb&fm=jpg&w=120&h=120&fit=crop&q=80"
-            alt="Aria"
+            alt="ERA"
             className="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm"
           />
           <div>
-            <div className="font-display font-bold text-sm text-[var(--primary)] leading-tight">Aria Bennett</div>
+            <div className="font-display font-bold text-sm text-[var(--primary)] leading-tight">ERA</div>
             <div className="text-[10px] tracking-[0.15em] uppercase text-[var(--text-secondary)] mt-0.5">
-              Advisor · online
+              EU Relationship Assistant
             </div>
           </div>
         </div>
