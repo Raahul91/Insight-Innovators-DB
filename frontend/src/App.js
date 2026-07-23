@@ -5,6 +5,8 @@ import { Toaster } from "sonner";
 import { Sidebar } from "@/components/Sidebar";
 import { TopHeader } from "@/components/TopHeader";
 import { AIAgent } from "@/components/AIAgent";
+import { ERAPanel } from "@/components/ERAPanel";
+import { ERAProvider } from "@/components/ERAContext";
 import Dashboard from "@/pages/Dashboard";
 import Objectives from "@/pages/Objectives";
 import Products from "@/pages/Products";
@@ -21,9 +23,15 @@ const Shell = () => {
   const meta = PAGE_META[location.pathname] || PAGE_META["/"];
 
   return (
-    <div className="app-shell grain-overlay">
-      <Sidebar />
-      <main className="flex flex-col min-h-screen relative">
+    <div className="grain-overlay min-h-screen grid lg:grid-cols-2 md:grid-cols-[260px_1fr] grid-cols-1 bg-[var(--bg)]">
+      {/* Laptop+ : ERA occupies left half (50vw) */}
+      <ERAPanel />
+      {/* Mobile / tablet : keep the compact sidebar */}
+      <div className="lg:hidden">
+        <Sidebar />
+      </div>
+
+      <main className="flex flex-col min-h-screen relative bg-[var(--bg)]">
         <TopHeader title={meta.title} subtitle={meta.subtitle} />
         <div className="flex-1">
           <Routes>
@@ -42,8 +50,10 @@ function App() {
   return (
     <LanguageProvider>
       <BrowserRouter>
-        <Shell />
-        <Toaster position="top-right" richColors />
+        <ERAProvider>
+          <Shell />
+          <Toaster position="top-right" richColors />
+        </ERAProvider>
       </BrowserRouter>
     </LanguageProvider>
   );

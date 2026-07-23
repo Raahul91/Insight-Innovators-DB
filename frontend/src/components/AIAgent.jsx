@@ -1,211 +1,55 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Send, X, Volume2, VolumeX } from "lucide-react";
-import { API } from "../lib/api";
-import { useLanguage } from "../lib/language";
 import { ERAAvatar } from "./ERAAvatar";
+import { useERA } from "./ERAContext";
 
-const SESSION_KEY = "era-session-id";
-const getSessionId = () => {
-  let s = localStorage.getItem(SESSION_KEY);
-  if (!s) {
-    s = `sess_${Math.random().toString(36).slice(2)}_${Date.now()}`;
-    localStorage.setItem(SESSION_KEY, s);
-  }
-  return s;
-};
+/**
+ * Mobile / tablet floating variant of ERA (hidden on lg+, where ERAPanel takes over).
+ */
+export const AIAgent = () => {
+  const {
+    messages,
+    input,
+    setInput,
+    listening,
+    speaking,
+    streaming,
+    voiceEnabled,
+    setVoiceEnabled,
+    floatingOpen,
+    setFloatingOpen,
+    sendMessage,
+    toggleListen,
+    t,
+  } = useERA();
 
-export const AIAgent = ({ portfolioContext }) => {
-  const { code: langCode, label: langLabel, locale, t } = useLanguage();
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([{ role: "assistant", content: t("era_intro") }]);
-  const [input, setInput] = useState("");
-  const [listening, setListening] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [streaming, setStreaming] = useState(false);
-  const recognitionRef = useRef(null);
   const scrollRef = useRef(null);
-  const sessionId = useRef(getSessionId()).current;
-
-  // Update intro message when language changes (only if only the intro is in the log)
   useEffect(() => {
-    setMessages((m) => {
-      if (m.length === 1 && m[0].role === "assistant") {
-        return [{ role: "assistant", content: t("era_intro") }];
-      }
-      return m;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [langCode]);
-
-  // Update recognition language
-  useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    const rec = new SR();
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.lang = locale;
-    rec.onresult = (e) => {
-      const text = e.results[0][0].transcript;
-      setInput(text);
-      setListening(false);
-      setTimeout(() => sendMessage(text), 200);
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    recognitionRef.current = rec;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locale]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, streaming]);
-
-  // Broadcast streaming status so other pages can show "ERA is helping…"
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent("era-status", { detail: { streaming, speaking } }),
-    );
-  }, [streaming, speaking]);
-
-  const speak = (text) => {
-    if (!voiceEnabled || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = locale;
-    // Try to pick a matching voice for the locale
-    const voices = window.speechSynthesis.getVoices();
-    const match = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith(locale.toLowerCase().split("-")[0]));
-    if (match) utter.voice = match;
-    utter.rate = 1.02;
-    utter.pitch = 1;
-    utter.onstart = () => setSpeaking(true);
-    utter.onend = () => setSpeaking(false);
-    window.speechSynthesis.speak(utter);
-  };
-
-  const toggleListen = () => {
-    if (!recognitionRef.current) return;
-    if (listening) {
-      recognitionRef.current.stop();
-      setListening(false);
-    } else {
-      try {
-        window.speechSynthesis?.cancel();
-        recognitionRef.current.lang = locale;
-        recognitionRef.current.start();
-        setListening(true);
-      } catch (_) {
-        setListening(false);
-      }
-    }
-  };
-
-  const sendMessage = async (msgText) => {
-    const text = (msgText ?? input).trim();
-    if (!text || streaming) return;
-    setInput("");
-    setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
-    setStreaming(true);
-
-    try {
-      const res = await fetch(`${API}/chat/stream`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          session_id: sessionId,
-          language: langLabel,
-          portfolio_context: portfolioContext || null,
-        }),
-      });
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let full = "";
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split("\n\n");
-        buffer = chunks.pop() || "";
-        for (const chunk of chunks) {
-          const line = chunk.trim();
-          if (!line.startsWith("data:")) continue;
-          const payload = line.slice(5).replace(/^\s/, "");
-          if (payload === "[DONE]") continue;
-          if (payload.startsWith("[error]")) {
-            full += "\n(Error contacting ERA.)";
-          } else {
-            full += payload;
-          }
-          setMessages((m) => {
-            const copy = [...m];
-            copy[copy.length - 1] = { role: "assistant", content: full };
-            return copy;
-          });
-        }
-      }
-      if (full) speak(full);
-    } catch (e) {
-      setMessages((m) => {
-        const copy = [...m];
-        copy[copy.length - 1] = { role: "assistant", content: "…" };
-        return copy;
-      });
-    } finally {
-      setStreaming(false);
-    }
-  };
-
-  // Expose global helpers so any page can trigger ERA
-  useEffect(() => {
-    window.askERA = (prompt) => {
-      setOpen(true);
-      setTimeout(() => sendMessage(prompt), 250);
-    };
-    window.eraGreet = (text) => {
-      // Local greeting: no backend, just show + speak
-      setOpen(true);
-      setMessages((m) => [...m, { role: "assistant", content: text }]);
-      setTimeout(() => speak(text), 300);
-    };
-    return () => {
-      delete window.askERA;
-      delete window.eraGreet;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streaming, locale, voiceEnabled]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    sendMessage();
+    sendMessage(input);
   };
 
   return (
-    <>
+    <div className="lg:hidden">
       <button
         data-testid="ai-agent-toggle"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setFloatingOpen(!floatingOpen)}
         className="fixed bottom-6 right-6 z-40 group"
         aria-label="Open ERA assistant"
       >
-        <div
-          className={`relative h-16 w-16 rounded-full overflow-hidden ring-4 ring-white shadow-xl transition-transform group-hover:scale-105`}
-        >
+        <div className="relative h-16 w-16 rounded-full overflow-hidden ring-4 ring-white shadow-xl transition-transform group-hover:scale-105">
           <ERAAvatar size={64} speaking={speaking} listening={listening} />
           <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[var(--success)] border-2 border-white z-10" />
         </div>
       </button>
 
       <AnimatePresence>
-        {open && (
+        {floatingOpen && (
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -235,7 +79,7 @@ export const AIAgent = ({ portfolioContext }) => {
                 <button
                   data-testid="voice-toggle-btn"
                   onClick={() => {
-                    setVoiceEnabled((v) => !v);
+                    setVoiceEnabled(!voiceEnabled);
                     if (voiceEnabled) window.speechSynthesis?.cancel();
                   }}
                   className="h-8 w-8 rounded-full hover:bg-white/60 flex items-center justify-center"
@@ -249,7 +93,7 @@ export const AIAgent = ({ portfolioContext }) => {
                 </button>
                 <button
                   data-testid="ai-agent-close"
-                  onClick={() => setOpen(false)}
+                  onClick={() => setFloatingOpen(false)}
                   className="h-8 w-8 rounded-full hover:bg-white/60 flex items-center justify-center"
                 >
                   <X size={16} className="text-[var(--primary)]" />
@@ -319,6 +163,6 @@ export const AIAgent = ({ portfolioContext }) => {
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 };
