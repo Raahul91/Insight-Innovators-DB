@@ -1,0 +1,122 @@
+{
+  "theme": "light",
+  "typography": {
+    "headings": {
+      "family": "Chivo, sans-serif",
+      "weights": ["400", "700", "900"],
+      "description": "Clean, authoritative, and Swiss-inspired for high contrast and readability. Avoid generic sans-serif for impact."
+    },
+    "body": {
+      "family": "IBM Plex Sans, sans-serif",
+      "weights": ["400", "500"],
+      "description": "Sterile, highly legible for data-heavy tables and financial numbers."
+    },
+    "mono": {
+      "family": "IBM Plex Mono, monospace",
+      "description": "For financial figures, ticker symbols, and dynamic scoring."
+    }
+  },
+  "colors": {
+    "archetype": "Swiss & High-Contrast (Light Professional)",
+    "primary": "#0A2540",
+    "secondary": "#FFFFFF",
+    "accent": "#007AFF",
+    "success": "#34C759",
+    "danger": "#FF3B30",
+    "background": "#F8F9FA",
+    "surface": "#FFFFFF",
+    "border": "#E5E7EB",
+    "text": {
+      "primary": "#111827",
+      "secondary": "#4B5563"
+    },
+    "description": "Authority, clarity, and truth. Stark white bases, deep navy/black text, with semantic colors strictly for financial indicators. Never mix currencies without context."
+  },
+  "visual_enhancers": {
+    "surfaces": [
+      {
+        "name": "Dashboard Cards",
+        "style": "Flat background, 1px subtle border (border-gray-200), no shadow. On hover: slight lift (-translate-y-1) and subtle shadow (shadow-md)."
+      },
+      {
+        "name": "AI Agent Panel",
+        "style": "Glassmorphism (Crystal/Apple variant). High opacity background (bg-white/70), heavy blur (backdrop-blur-xl), 1px delicate inner stroke (border-white/40). ambient shadow."
+      }
+    ],
+    "textures": "Subtle noise overlay (opacity 0.02) to break absolute digital flatness, maintaining a premium feel."
+  },
+  "grids": {
+    "dashboard": "High Density Grid (Mode B). grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-6. Summary cards take col-span-1, main charts take col-span-2 or 3.",
+    "portfolio_list": "Table-based layout for products. Responsive lists on mobile."
+  },
+  "layouts": {
+    "general": "Role-First Hierarchy. Sidebar navigation + Top Header with User Profile. Main content area structured with progressive disclosure.",
+    "questionnaire": "Focused, centered layout with step indicators. Maximum width for readability, ample padding (p-12).",
+    "ai_agent": "Floating panel (bottom-right) or side-drawer, visually distinct via Glassmorphism to show it acts across contexts."
+  },
+  "motion": {
+    "micro_interactions": "Hover states on all interactive elements (bg darkening or subtle lift). Focus states clearly defined with ring-2 of primary accent color.",
+    "transitions": "Page transitions and chart loading use smooth ease-out animations. The AI agent panel expands with a bouncy spring animation (framer-motion).",
+    "accessibility": "Respect prefers-reduced-motion."
+  },
+  "component_instructions": {
+    "navigation": "Sidebar with Phosphor icons. Top header with breadcrumbs and user avatar.",
+    "dashboard_cards": "Use Shadcn Card component. Remove default shadows, enforce 1px border. Use semantic colors for positive/negative return badges.",
+    "charts": "Recharts for Portfolio Performance (Line Chart) and Asset Allocation (Donut Chart). Ensure tooltips are styled clearly.",
+    "questionnaire": "Multi-step form wizard using Shadcn Forms. Progress bar at top. Large, clickable option cards for horizons.",
+    "product_list": "Data table (Shadcn Table) with sorting and filtering (Tabs for Stocks, Mutual Funds, etc.). Include Risk Badges (Pill shape, semantic colors).",
+    "ai_agent": "Chat interface. Input field with a microphone icon for voice context. Messages styled as bubbles. Floating action button to toggle visibility."
+  },
+  "accessibility": {
+    "contrast": "Ensure all text meets APCA/WCAG AA contrast ratios, especially financial figures and badges.",
+    "testing": "All interactive elements MUST include data-testid attribute (e.g., data-testid='ai-agent-toggle', data-testid='portfolio-tab-stocks')."
+  },
+  "media": {
+    "icons_library": "@phosphor-icons/react (for professional, clean duotone/regular weights matching the fintech vibe).",
+    "images": [
+      {
+        "category": "user_avatar",
+        "url": "https://images.unsplash.com/photo-1506863530036-1efeddceb993?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBwb3J0cmFpdCUyMGhlYWRzaG90fGVufDB8fHx8MTc4NDY1NDY5M3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Professional female headshot for user profile"
+      },
+      {
+        "category": "user_avatar_alt",
+        "url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBwb3J0cmFpdCUyMGhlYWRzaG90fGVufDB8fHx8MTc4NDY1NDY5M3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Professional male headshot for user profile"
+      },
+      {
+        "category": "ai_agent_avatar",
+        "url": "https://images.unsplash.com/photo-1622547748225-3fc4abd2cca0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDZ8MHwxfHNlYXJjaHwyfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBzcGhlcmUlMjBsaWdodHxlbnwwfHx8fDE3ODQ3ODYyNTJ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Minimalist blue/white abstract sphere for AI Agent identity"
+      },
+      {
+        "category": "background_hero",
+        "url": "https://images.pexels.com/photos/36145210/pexels-photo-36145210.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Modern glass skyscraper facade for optional onboarding/login background"
+      }
+    ]
+  },
+  "3d_libraries": {
+    "usage": "Minimal. Use Recharts for 2D data visualization. For the AI agent, a simple CSS pulsing effect or Spline embed (if needed for a 3D sphere) can be used, but CSS/SVG animations are preferred for performance in this data-heavy context."
+  },
+  "instructions_to_main_agent": [
+    "Build a robust sidebar navigation (Dashboard, Objectives, Products).",
+    "Construct the Portfolio Overview Dashboard with Shadcn Cards and Recharts (Line for net worth, Donut for allocation).",
+    "Develop the Financial Objectives Questionnaire as a step-by-step wizard.",
+    "Create the Investment Options Product List using Shadcn Tabs (Stocks, ETFs, Crypto, etc.) and Table.",
+    "Implement the AI Talking Agent as a floating, draggable (or fixed bottom-right) glassmorphism chat panel with text and voice inputs.",
+    "Strictly follow the color palette: white/gray backgrounds, dark text, and semantic green/red. Do not overuse primary color.",
+    "Ensure all data points are properly formatted as currency or percentages.",
+    "Add 'data-testid' to all buttons, tabs, and interactive elements."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Avoid generic 'AI slop' aesthetic. Create depth with borders and subtle hover states.",
+    "Do not apply `transition: all` universally.",
+    "Do not center-align the app container (`.App { text-align: center; }` is forbidden).",
+    "Always use modern button styles (pill-shaped or sharp with interaction animations).",
+    "NEVER use emojis as icons. Use Phosphor Icons.",
+    "Every interaction needs micro-animations (hover states, focus rings).",
+    "Ensure generous spacing (p-6 to p-8 inside cards).",
+    "Use sonner for toast notifications."
+  ]
+}
