@@ -5,3 +5,7 @@ spring:
       chat:
         options:
           model: gpt-4o-mini
+
+finhub:
+  api-key: ${finhub-api-key}
+  base-url: https://finnhub.io/api/v1
