@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchQuestions, submitQuestionnaire } from "../lib/api";
-import { CheckCircle2, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { API } from "../lib/api";
+import { CheckCircle2, ChevronLeft, ChevronRight, RotateCcw, Download } from "lucide-react";
 import { toast } from "sonner";
 
 const HORIZON_COLORS = {
@@ -132,13 +133,43 @@ export default function Objectives() {
               </div>
             </div>
 
-            <button
-              onClick={restart}
-              data-testid="restart-questionnaire-btn"
-              className="mt-8 inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[var(--border)] text-sm font-medium text-[var(--primary)] hover:bg-gray-50 transition-colors"
-            >
-              <RotateCcw size={14} /> Retake assessment
-            </button>
+            <div className="flex flex-wrap items-center gap-3 mt-8">
+              {result.submission_id && (
+                <button
+                  data-testid="download-suitability-btn"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(
+                        `${API}/questionnaire/suitability/${result.submission_id}`,
+                      );
+                      if (!res.ok) throw new Error("Download failed");
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `suitability-${result.submission_id.slice(0, 8)}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                      toast.success("MiFID II Suitability Statement downloaded");
+                    } catch (e) {
+                      toast.error("Could not download PDF");
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--primary)] text-white text-sm font-semibold hover:bg-[var(--accent)] transition-colors"
+                >
+                  <Download size={14} /> Download MiFID II Statement
+                </button>
+              )}
+              <button
+                onClick={restart}
+                data-testid="restart-questionnaire-btn"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[var(--border)] text-sm font-medium text-[var(--primary)] hover:bg-gray-50 transition-colors"
+              >
+                <RotateCcw size={14} /> Retake assessment
+              </button>
+            </div>
           </div>
         </div>
       </div>
