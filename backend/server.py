@@ -8,6 +8,8 @@ import os
 import json
 import logging
 import re
+import asyncio
+import httpx
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
@@ -16,6 +18,8 @@ from datetime import datetime, timezone
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
+with open(ROOT_DIR / "recommendation_profiles.json", encoding="utf-8") as profile_file:
+    RECOMMENDATION_PROFILES = json.load(profile_file)
 
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
@@ -41,6 +45,16 @@ class Holding(BaseModel):
     avg_cost: float
     current_price: float
     day_change_pct: float
+
+
+class HoldingTrade(BaseModel):
+    side: Literal["buy", "sell"]
+    quantity: float = Field(gt=0)
+    execution_price: Optional[float] = Field(default=None, gt=0)
+    name: Optional[str] = None
+    category: Optional[str] = None
+    current_price: Optional[float] = Field(default=None, gt=0)
+    day_change_pct: float = 0
 
 
 class PortfolioSummary(BaseModel):
@@ -80,10 +94,35 @@ class QuestionnaireSubmission(BaseModel):
 
 class QuestionnaireResult(BaseModel):
     total_score: int
+    profile_id: str
+    primary_objective: str
     horizon: Literal["Short-term", "Medium-term", "Long-term"]
     risk_profile: Literal["Conservative", "Balanced", "Aggressive"]
     recommendation: str
     allocation_suggestion: List[dict]
+    knowledge: Literal["BEGINNER", "INTERMEDIATE", "ADVANCED"]
+    experience: str
+    esg_preference: Literal["YES", "NO"] = "NO"
+
+
+class ContextualCustomerProfile(BaseModel):
+    riskAppetite: Literal["LOW", "MEDIUM", "HIGH"]
+    knowledge: Literal["BEGINNER", "INTERMEDIATE", "ADVANCED"]
+    experience: str
+    esgPreference: Literal["YES", "NO"]
+
+
+class ContextualOrder(BaseModel):
+    instrumentId: Optional[str] = None
+    instrumentSymbol: Optional[str] = None
+    instrumentName: str
+    action: Literal["BUY", "SELL"]
+    quantity: int = Field(gt=0)
+
+
+class ContextualInsightRequest(BaseModel):
+    customerProfile: ContextualCustomerProfile
+    order: ContextualOrder
 
 
 class ChatRequest(BaseModel):
@@ -115,18 +154,27 @@ class EraTurn(BaseModel):
     confidence: Literal["none", "low", "medium", "high"] = "none"
 
 
-# ---------- Static/mock data ----------
-PORTFOLIO_HOLDINGS = [
-    Holding(ticker="ASML.AS", name="ASML Holding N.V.", category="Stocks", shares=18, avg_cost=620.00, current_price=892.40, day_change_pct=1.42),
-    Holding(ticker="MC.PA", name="LVMH Moët Hennessy Louis Vuitton", category="Stocks", shares=12, avg_cost=680.00, current_price=742.30, day_change_pct=-0.35),
-    Holding(ticker="SAP.DE", name="SAP SE", category="Stocks", shares=40, avg_cost=112.00, current_price=178.60, day_change_pct=0.68),
-    Holding(ticker="VWCE.DE", name="Vanguard FTSE All-World UCITS ETF", category="ETFs", shares=85, avg_cost=98.20, current_price=124.85, day_change_pct=0.52),
-    Holding(ticker="IMEU.L", name="iShares Core MSCI Europe UCITS ETF", category="ETFs", shares=120, avg_cost=56.40, current_price=68.72, day_change_pct=0.44),
-    Holding(ticker="IE00B4L5Y983", name="iShares Core MSCI World UCITS Fund", category="Mutual Funds", shares=95, avg_cost=68.10, current_price=89.35, day_change_pct=0.61),
-    Holding(ticker="EUNH.DE", name="iShares Euro Government Bond 7-10y UCITS", category="Bonds", shares=180, avg_cost=142.50, current_price=138.20, day_change_pct=-0.14),
-    Holding(ticker="BTC", name="Bitcoin", category="Crypto", shares=0.28, avg_cost=28500.00, current_price=59200.00, day_change_pct=2.65),
-    Holding(ticker="ETH", name="Ethereum", category="Crypto", shares=2.1, avg_cost=1620.00, current_price=3120.00, day_change_pct=1.78),
-]
+# ---------- File-backed portfolio state ----------
+HOLDINGS_FILE = ROOT_DIR / "holdings.json"
+holdings_lock = asyncio.Lock()
+
+
+def load_holdings() -> List[Holding]:
+    with open(HOLDINGS_FILE, encoding="utf-8") as holdings_file:
+        return [Holding.model_validate(item) for item in json.load(holdings_file)]
+
+
+def save_holdings(holdings: List[Holding]) -> None:
+    temporary_file = HOLDINGS_FILE.with_suffix(".json.tmp")
+    with open(temporary_file, "w", encoding="utf-8") as holdings_file:
+        json.dump(
+            [holding.model_dump() for holding in holdings],
+            holdings_file,
+            ensure_ascii=False,
+            indent=2,
+        )
+        holdings_file.write("\n")
+    os.replace(temporary_file, HOLDINGS_FILE)
 
 PRODUCTS: List[Product] = [
     # Stocks (European blue chips)
@@ -195,15 +243,16 @@ QUESTIONS = [
 
 # ---------- Helpers ----------
 def compute_portfolio_summary() -> PortfolioSummary:
-    total_invested = sum(h.shares * h.avg_cost for h in PORTFOLIO_HOLDINGS)
-    net_worth = sum(h.shares * h.current_price for h in PORTFOLIO_HOLDINGS)
+    holdings = load_holdings()
+    total_invested = sum(h.shares * h.avg_cost for h in holdings)
+    net_worth = sum(h.shares * h.current_price for h in holdings)
     total_gain = net_worth - total_invested
     total_gain_pct = (total_gain / total_invested) * 100 if total_invested else 0.0
-    day_change = sum(h.shares * h.current_price * (h.day_change_pct / 100) for h in PORTFOLIO_HOLDINGS)
+    day_change = sum(h.shares * h.current_price * (h.day_change_pct / 100) for h in holdings)
     day_change_pct = (day_change / net_worth) * 100 if net_worth else 0.0
 
     allocation_map: dict = {}
-    for h in PORTFOLIO_HOLDINGS:
+    for h in holdings:
         val = h.shares * h.current_price
         allocation_map[h.category] = allocation_map.get(h.category, 0.0) + val
     allocation = [
@@ -230,49 +279,54 @@ def compute_portfolio_summary() -> PortfolioSummary:
         day_change_pct=round(day_change_pct, 2),
         allocation=allocation,
         performance=performance,
-        holdings=PORTFOLIO_HOLDINGS,
+        holdings=holdings,
     )
 
 
 def compute_questionnaire(answers: List[QuestionnaireAnswer]) -> QuestionnaireResult:
+    answer_map = {answer.question_id: answer.value for answer in answers}
     total = sum(a.value for a in answers)
-    # max is 5 questions * 4 = 20, min 5
-    if total <= 9:
-        horizon = "Short-term"
-        risk = "Conservative"
-        rec = "Focus on capital preservation with bonds and low-risk instruments. Prioritize stability over growth."
-        alloc = [
-            {"category": "Bonds", "percentage": 60},
-            {"category": "Mutual Funds", "percentage": 20},
-            {"category": "ETFs", "percentage": 15},
-            {"category": "Stocks", "percentage": 5},
-        ]
-    elif total <= 15:
-        horizon = "Medium-term"
-        risk = "Balanced"
-        rec = "A balanced mix of growth and income assets suits your profile. Diversify across equities and fixed income."
-        alloc = [
-            {"category": "Stocks", "percentage": 35},
-            {"category": "ETFs", "percentage": 25},
-            {"category": "Mutual Funds", "percentage": 20},
-            {"category": "Bonds", "percentage": 15},
-            {"category": "Crypto", "percentage": 5},
-        ]
-    else:
-        horizon = "Long-term"
-        risk = "Aggressive"
-        rec = "Your long horizon and tolerance support aggressive growth allocations weighted toward equities and alternatives."
-        alloc = [
-            {"category": "Stocks", "percentage": 50},
-            {"category": "ETFs", "percentage": 25},
-            {"category": "Crypto", "percentage": 15},
-            {"category": "Mutual Funds", "percentage": 7},
-            {"category": "Bonds", "percentage": 3},
-        ]
+    horizon_value = answer_map.get("q2", 2)
+    horizon = "Short-term" if horizon_value == 1 else "Medium-term" if horizon_value == 2 else "Long-term"
+
+    risk_values = [answer_map.get(question_id, 2) for question_id in ("q1", "q3", "q4", "q5")]
+    risk_score = sum(risk_values)
+    risk = "Conservative" if risk_score <= 7 else "Balanced" if risk_score <= 12 else "Aggressive"
+
+    objective_value = answer_map.get("q1", 2)
+    objective = next(
+        option["label"] for option in QUESTIONS[0]["options"] if option["value"] == objective_value
+    )
+    profile = next(
+        item
+        for item in RECOMMENDATION_PROFILES
+        if item["horizon"] == horizon and item["risk_profile"] == risk
+    )
+    profile_id = f"{horizon.lower().replace('-term', '')}-{risk.lower()}"
+    experience_value = answer_map.get("q5", 2)
+    knowledge = (
+        "BEGINNER" if experience_value == 1
+        else "INTERMEDIATE" if experience_value in (2, 3)
+        else "ADVANCED"
+    )
+    experience = {
+        1: "Less than 1 year",
+        2: "1-3 Years",
+        3: "3-5 Years",
+        4: "5+ Years",
+    }[experience_value]
 
     return QuestionnaireResult(
-        total_score=total, horizon=horizon, risk_profile=risk,
-        recommendation=rec, allocation_suggestion=alloc,
+        total_score=total,
+        profile_id=profile_id,
+        primary_objective=objective,
+        horizon=horizon,
+        risk_profile=risk,
+        recommendation=profile["recommendation"],
+        allocation_suggestion=profile["allocation_suggestion"],
+        knowledge=knowledge,
+        experience=experience,
+        esg_preference="NO",
     )
 
 
@@ -287,11 +341,69 @@ async def get_portfolio():
     return compute_portfolio_summary()
 
 
+@api_router.post("/portfolio/holdings/{ticker}/trade", response_model=PortfolioSummary)
+async def trade_holding(ticker: str, trade: HoldingTrade):
+    async with holdings_lock:
+        holdings = load_holdings()
+        holding = next(
+            (item for item in holdings if item.ticker.lower() == ticker.lower()),
+            None,
+        )
+        if holding is None:
+            if trade.side == "sell":
+                raise HTTPException(status_code=404, detail="Holding not found.")
+            if not trade.name or not trade.category or not trade.current_price:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Product details are required when creating a new holding.",
+                )
+            holding = Holding(
+                ticker=ticker,
+                name=trade.name,
+                category=trade.category,
+                shares=0,
+                avg_cost=trade.execution_price or trade.current_price,
+                current_price=trade.current_price,
+                day_change_pct=trade.day_change_pct,
+            )
+            holdings.append(holding)
+        if trade.side == "sell" and trade.quantity > holding.shares:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot sell {trade.quantity:g}; only {holding.shares:g} available.",
+            )
+
+        if trade.side == "buy":
+            previous_cost = holding.shares * holding.avg_cost
+            added_cost = trade.quantity * (trade.execution_price or holding.current_price)
+            holding.shares += trade.quantity
+            holding.avg_cost = (previous_cost + added_cost) / holding.shares
+        else:
+            holding.shares -= trade.quantity
+
+        if holding.shares <= 1e-9:
+            holdings = [item for item in holdings if item.ticker != holding.ticker]
+        save_holdings(holdings)
+        return compute_portfolio_summary()
+
+
 @api_router.get("/products", response_model=List[Product])
 async def get_products(category: Optional[str] = None):
     if category and category != "All":
         return [p for p in PRODUCTS if p.category == category]
     return PRODUCTS
+
+
+@api_router.get("/recommendations")
+async def get_recommendations(
+    horizon: Literal["Short-term", "Medium-term", "Long-term"],
+    risk_profile: Literal["Conservative", "Balanced", "Aggressive"],
+):
+    return next(
+        profile
+        for profile in RECOMMENDATION_PROFILES
+        if profile["horizon"] == horizon and profile["risk_profile"] == risk_profile
+    )
 
 
 @api_router.get("/questionnaire/questions")
@@ -314,12 +426,56 @@ async def submit_questionnaire(sub: QuestionnaireSubmission):
     return result
 
 
+@api_router.post("/contextual-insights")
+async def contextual_insights(request: ContextualInsightRequest):
+    """Attach the definitive portfolio snapshot and delegate insight generation."""
+    contextual_api_url = os.environ.get(
+        "CONTEXTUAL_INVESTMENT_API_URL",
+        "http://localhost:8080/api/contextual-insights",
+    )
+    payload = request.model_dump()
+    portfolio = compute_portfolio_summary()
+    payload["portfolioContext"] = {
+        "netWorth": portfolio.net_worth,
+        "totalInvested": portfolio.total_invested,
+        "totalGain": portfolio.total_gain,
+        "totalGainPct": portfolio.total_gain_pct,
+        "holdings": [
+            {
+                "ticker": holding.ticker,
+                "name": holding.name,
+                "category": holding.category,
+                "shares": holding.shares,
+                "avgCost": holding.avg_cost,
+                "currentPrice": holding.current_price,
+                "dayChangePct": holding.day_change_pct,
+            }
+            for holding in portfolio.holdings
+        ],
+    }
+    try:
+        async with httpx.AsyncClient(timeout=60) as contextual_client:
+            response = await contextual_client.post(contextual_api_url, json=payload)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as error:
+        detail = error.response.text or "Contextual investment API rejected the request."
+        raise HTTPException(status_code=502, detail=detail) from error
+    except httpx.RequestError as error:
+        raise HTTPException(
+            status_code=503,
+            detail="Contextual investment insights are temporarily unavailable.",
+        ) from error
+
+
 @api_router.post("/chat/stream")
 async def chat_stream(req: ChatRequest):
     system_msg = (
-        "Role: You are Era, the European Relationship Assistant in a retail-investing app. "
+        "Role: You are Era, the customer's warm, professional digital Relationship Manager in a European retail-investing app. "
         "Personality: warm, calm, concise, and conversational because every reply may be spoken aloud. "
-        "Goal: guide the customer through the current on-screen financial-objectives question. "
+        "Goal: understand the customer's needs and guide them naturally through the current financial-objectives question, "
+        "like a helpful human relationship manager. Do not describe yourself as a system that proposes, matches, or selects "
+        "on-screen choices. "
         "Strict scope: discuss only the current on-screen question, its available choices, the customer's financial "
         "objectives, risk, horizon, investing experience, portfolio, or relevant European investment concepts. "
         "For greetings or any unrelated, off-topic, joking, abusive, political, entertainment, coding, general-knowledge, "

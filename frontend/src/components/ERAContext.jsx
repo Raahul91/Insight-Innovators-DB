@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { API } from "../lib/api";
 import { useLanguage } from "../lib/language";
 
@@ -51,6 +52,8 @@ const selectBestVoice = (voices, locale) => {
 
 export const ERAProvider = ({ children, portfolioContext = null }) => {
   const { code: langCode, label: langLabel, locale, t } = useLanguage();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState([{ role: "assistant", content: t("era_intro") }]);
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
@@ -65,6 +68,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
   const speakRef = useRef(null);
   const pendingActionRef = useRef(null);
   const streamingRef = useRef(false);
+  const previousPathRef = useRef(location.pathname);
   const sessionId = useRef(getSessionId()).current;
   const portfolioContextRef = useRef(portfolioContext);
   portfolioContextRef.current = portfolioContext;
@@ -76,6 +80,42 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
       listeningTimerRef.current = null;
     }
   }, []);
+
+  const toggleVoice = useCallback(() => {
+    setVoiceEnabled((enabled) => {
+      if (enabled) {
+        window.speechSynthesis?.cancel();
+        setSpeaking(false);
+      }
+      return !enabled;
+    });
+  }, []);
+
+  // Leaving Objectives or Products must terminate that page's conversation completely.
+  useEffect(() => {
+    const previousPath = previousPathRef.current;
+    previousPathRef.current = location.pathname;
+    const contextualPages = ["/objectives", "/products"];
+    if (!contextualPages.includes(previousPath) || location.pathname === previousPath) return;
+
+    pendingActionRef.current = null;
+    clearListeningTimer();
+    recognitionSuppressedRef.current = true;
+    try {
+      recognitionRef.current?.abort();
+    } catch (_) {
+      // Recognition may already be stopped.
+    }
+    activeRequestRef.current?.abort();
+    activeRequestRef.current = null;
+    window.speechSynthesis?.cancel();
+    delete window.eraQuestionnaireContext;
+    setInput("");
+    setListening(false);
+    setSpeaking(false);
+    setStreaming(false);
+    setMessages([{ role: "assistant", content: t("era_intro") }]);
+  }, [location.pathname, clearListeningTimer, t]);
 
   const isConfirmation = useCallback((text) => {
     const normalized = text
@@ -214,6 +254,68 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
       if (!text || streaming) return;
       const displayUser = options.displayUser !== false;
       const expectResponse = options.expectResponse !== false;
+      const baseQuestionnaireContext =
+        options.questionnaireContext || window.eraQuestionnaireContext || null;
+      const normalizedCommand = text.toLowerCase().trim().replace(/[.,!?]/g, "");
+
+      const runLocalCommand = (reply, action) => {
+        pendingActionRef.current = null;
+        clearListeningTimer();
+        recognitionSuppressedRef.current = true;
+        try {
+          recognitionRef.current?.abort();
+        } catch (_) {
+          // Recognition may already be stopped.
+        }
+        activeRequestRef.current?.abort();
+        activeRequestRef.current = null;
+        window.speechSynthesis?.cancel();
+        setInput("");
+        setListening(false);
+        setSpeaking(false);
+        setStreaming(false);
+        setMessages((m) => [
+          ...m,
+          ...(displayUser ? [{ role: "user", content: text }] : []),
+          { role: "assistant", content: reply },
+        ]);
+        action();
+        setTimeout(() => speak(reply, { listenAfter: false }), 150);
+      };
+
+      if (
+        /\b(go|come|move|take me|return)\b.*\b(back|previous|last)\b|\b(previous|last)\s+question\b|\bgo back\b/i.test(
+          normalizedCommand,
+        ) &&
+        baseQuestionnaireContext
+      ) {
+        if ((baseQuestionnaireContext.step || 1) <= 1) {
+          runLocalCommand("We’re already on the first question.", () => {});
+        } else {
+          runLocalCommand("Of course. Let’s go back to the previous question.", () => {
+            window.dispatchEvent(
+              new CustomEvent("era-questionnaire-navigation", {
+                detail: { direction: "previous" },
+              }),
+            );
+          });
+        }
+        return;
+      }
+
+      if (/\b(go|open|show|visit|move|take me)\b.*\bobjectives?\b/i.test(normalizedCommand)) {
+        runLocalCommand("Of course. I’ll take you to your financial objectives.", () =>
+          navigate("/objectives"),
+        );
+        return;
+      }
+
+      if (/\b(go|open|show|visit|move|take me)\b.*\bproducts?\b/i.test(normalizedCommand)) {
+        runLocalCommand("Certainly. Let’s look at the available investment products.", () =>
+          navigate("/products"),
+        );
+        return;
+      }
 
       if (pendingActionRef.current && isConfirmation(text)) {
         const action = pendingActionRef.current;
@@ -247,8 +349,6 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         return;
       }
 
-      const baseQuestionnaireContext =
-        options.questionnaireContext || window.eraQuestionnaireContext || null;
       const questionnaireContext =
         baseQuestionnaireContext && pendingActionRef.current
           ? {
@@ -344,7 +444,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         }
       }
     },
-    [streaming, sessionId, langLabel, speak, isConfirmation, isRejection],
+    [streaming, sessionId, langLabel, speak, isConfirmation, isRejection, clearListeningTimer, navigate],
   );
 
   const greetLocal = useCallback(
@@ -442,7 +542,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         .map((option) => `${option.value}. ${option.label}`)
         .join("\n");
       const prompt = isFirstQuestion
-        ? `Briefly introduce yourself as Era, explain that you will listen and select answers on screen, then ask the current question naturally.\n\nAvailable choices:\n${options}`
+        ? `Introduce yourself warmly as Era, the customer's Relationship Manager. Say that you are here to understand their needs and help them make choices that fit their financial goals. Then ask the current question naturally. Do not mention proposing, matching, selecting, or changing anything on screen.\n\nAvailable choices:\n${options}`
         : `Ask the current on-screen question naturally and invite the customer to answer in their own words.\n\nAvailable choices:\n${options}`;
       setTimeout(
         () => sendMessage(prompt, { displayUser: false, questionnaireContext }),
@@ -482,6 +582,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
     streaming,
     voiceEnabled,
     setVoiceEnabled,
+    toggleVoice,
     floatingOpen,
     setFloatingOpen,
     sendMessage,

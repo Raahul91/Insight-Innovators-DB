@@ -11,7 +11,7 @@ export const LANGS = [
 export const STRINGS = {
   en: {
     era_intro:
-      "Hi, I'm ERA — your European Relationship Assistant. I can walk you through the questionnaire, explain any question in plain language, and suggest which answer fits your situation best. Tap the mic and just talk to me, or type below.",
+      "Hi, I'm Era, your Relationship Manager. I'm here to understand your needs, explain anything that feels unclear, and help you make choices that fit your financial goals. Tap the mic and talk to me, or type below.",
     greet_objectives:
       "Hi, I'm ERA, your personal guide for this assessment. I'll take you through five short questions to understand your goals, time horizon, and comfort with risk. If anything feels unclear, choose Ask ERA to explain for a simple explanation, or Help me answer this for a recommendation based on your situation. You can also speak to me or type a question at any time.",
     greet_dashboard:
@@ -23,7 +23,7 @@ export const STRINGS = {
     ask_era_explain: "Ask ERA to explain",
     help_me_answer: "Help me answer this",
     era_input_placeholder: "Ask ERA about your portfolio…",
-    era_role: "European Relationship Assistant",
+    era_role: "Relationship Manager",
     era_intro_greeting_prompt:
       "Give the user a warm, one-sentence spoken welcome to the Financial Objectives questionnaire and remind them that I can explain any question if they need.",
     era_result_summary_prompt:
@@ -34,7 +34,7 @@ export const STRINGS = {
   },
   de: {
     era_intro:
-      "Hallo, ich bin ERA — dein European Relationship Assistant. Ich führe dich durch den Fragebogen, erkläre jede Frage in einfacher Sprache und schlage dir die passende Antwort für deine Situation vor. Tipp auf das Mikrofon und sprich mit mir oder schreib unten.",
+      "Hallo, ich bin Era, dein Relationship Manager. Ich möchte deine Bedürfnisse verstehen und dir helfen, Entscheidungen zu treffen, die zu deinen finanziellen Zielen passen.",
     greet_objectives:
       "Willkommen! Ich bin ERA. Wir ermitteln gemeinsam dein Anlegerprofil. Ich bleibe hier rechts — tipp bei jeder Frage einfach auf ‚ERA um Erklärung bitten‘, wenn du Hilfe brauchst.",
     greet_dashboard:
@@ -46,7 +46,7 @@ export const STRINGS = {
     ask_era_explain: "ERA um Erklärung bitten",
     help_me_answer: "Hilf mir bei der Antwort",
     era_input_placeholder: "Frag ERA zu deinem Portfolio…",
-    era_role: "European Relationship Assistant",
+    era_role: "Relationship Manager",
     era_intro_greeting_prompt:
       "Begrüße den Nutzer in einem warmen, kurzen Satz zum Fragebogen 'Finanzielle Ziele' und erinnere daran, dass du jede Frage erklären kannst.",
     era_result_summary_prompt:
@@ -57,7 +57,7 @@ export const STRINGS = {
   },
   fr: {
     era_intro:
-      "Bonjour, je suis ERA — votre European Relationship Assistant. Je vous accompagne dans le questionnaire, j'explique chaque question simplement et je vous suggère la réponse la plus adaptée. Appuyez sur le micro pour me parler ou tapez ci-dessous.",
+      "Bonjour, je suis Era, votre Relationship Manager. Je suis là pour comprendre vos besoins et vous aider à faire des choix adaptés à vos objectifs financiers.",
     greet_objectives:
       "Bienvenue ! Je suis ERA. Nous allons définir votre profil d'investisseur ensemble. Je reste ici à droite — appuyez sur ‘Demander à ERA d'expliquer’ sur n'importe quelle question si vous avez besoin d'aide.",
     greet_dashboard:
@@ -69,7 +69,7 @@ export const STRINGS = {
     ask_era_explain: "Demander à ERA d'expliquer",
     help_me_answer: "Aidez-moi à répondre",
     era_input_placeholder: "Posez une question à ERA…",
-    era_role: "European Relationship Assistant",
+    era_role: "Relationship Manager",
     era_intro_greeting_prompt:
       "Souhaitez la bienvenue à l'utilisateur en une phrase chaleureuse pour le questionnaire 'Objectifs financiers' et rappelez que vous pouvez expliquer chaque question.",
     era_result_summary_prompt:
@@ -80,7 +80,7 @@ export const STRINGS = {
   },
   es: {
     era_intro:
-      "Hola, soy ERA — tu European Relationship Assistant. Te acompaño en el cuestionario, te explico cada pregunta en lenguaje sencillo y te sugiero la respuesta que mejor se adapta a ti. Toca el micrófono para hablarme o escribe abajo.",
+      "Hola, soy Era, tu Relationship Manager. Estoy aquí para comprender tus necesidades y ayudarte a tomar decisiones que encajen con tus objetivos financieros.",
     greet_objectives:
       "¡Bienvenido! Soy ERA. Vamos a definir juntos tu perfil de inversor. Me quedo aquí a la derecha — pulsa ‘Pídele a ERA que lo explique’ en cualquier pregunta si necesitas ayuda.",
     greet_dashboard:
@@ -92,7 +92,7 @@ export const STRINGS = {
     ask_era_explain: "Pídele a ERA que lo explique",
     help_me_answer: "Ayúdame a responder",
     era_input_placeholder: "Pregúntale a ERA sobre tu cartera…",
-    era_role: "European Relationship Assistant",
+    era_role: "Relationship Manager",
     era_intro_greeting_prompt:
       "Da la bienvenida al usuario en una frase cálida al cuestionario de 'Objetivos financieros' y recuérdale que puedes explicar cualquier pregunta.",
     era_result_summary_prompt:
@@ -103,7 +103,7 @@ export const STRINGS = {
   },
   it: {
     era_intro:
-      "Ciao, sono ERA — il tuo European Relationship Assistant. Ti guido nel questionario, ti spiego ogni domanda in modo semplice e ti suggerisco la risposta più adatta alla tua situazione. Tocca il microfono e parlami, oppure scrivi qui sotto.",
+      "Ciao, sono Era, il tuo Relationship Manager. Sono qui per capire le tue esigenze e aiutarti a fare scelte in linea con i tuoi obiettivi finanziari.",
     greet_objectives:
       "Benvenuto! Sono ERA. Definiamo insieme il tuo profilo d'investitore. Resto qui a destra — tocca ‘Chiedi a ERA di spiegare’ in qualsiasi domanda se hai bisogno.",
     greet_dashboard:
@@ -115,7 +115,7 @@ export const STRINGS = {
     ask_era_explain: "Chiedi a ERA di spiegare",
     help_me_answer: "Aiutami a rispondere",
     era_input_placeholder: "Chiedi a ERA del tuo portafoglio…",
-    era_role: "European Relationship Assistant",
+    era_role: "Relationship Manager",
     era_intro_greeting_prompt:
       "Dai un benvenuto caloroso in una frase all'utente per il questionario 'Obiettivi finanziari' e ricordagli che puoi spiegare qualsiasi domanda.",
     era_result_summary_prompt:

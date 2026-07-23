@@ -1,5 +1,5 @@
 export const fmtCurrency = (n) =>
-  new Intl.NumberFormat("de-DE", {
+  new Intl.NumberFormat("en-IE", {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,

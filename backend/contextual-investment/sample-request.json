@@ -1,0 +1,32 @@
+{
+  "customerProfile": {
+    "riskAppetite": "MODERATE",
+    "knowledge": "INTERMEDIATE",
+    "experience": "5 years",
+    "esgPreference": "HIGH"
+  },
+  "order": {
+    "instrumentId": "US0378331005",
+    "instrumentSymbol": "AAPL",
+    "instrumentName": "APPLE",
+    "action": "BUY",
+    "quantity": 100
+  },
+  "portfolioContext": {
+    "netWorth": 148250.75,
+    "totalInvested": 121000.00,
+    "totalGain": 27250.75,
+    "totalGainPct": 22.52,
+    "holdings": [
+      {
+        "ticker": "ASML.AS",
+        "name": "ASML Holding N.V.",
+        "category": "Stocks",
+        "shares": 19,
+        "avgCost": 634.34,
+        "currentPrice": 892.40,
+        "dayChangePct": 1.42
+      }
+    ]
+  }
+}

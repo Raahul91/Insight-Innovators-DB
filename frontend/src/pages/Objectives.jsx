@@ -93,6 +93,7 @@ export default function Objectives() {
             answers: Object.entries(answers).map(([question_id, value]) => ({ question_id, value })),
           };
           const res = await submitQuestionnaire(payload);
+          sessionStorage.setItem("eurobank-customer-profile", JSON.stringify(res));
           setResult(res);
           toast.success("Objectives assessment complete", {
             description: `Recommended horizon: ${res.horizon}`,
@@ -115,11 +116,24 @@ export default function Objectives() {
     return () => window.removeEventListener("era-status", handler);
   }, []);
 
+  // Let Era respond to spoken requests to revisit the preceding question.
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.detail?.direction !== "previous" || result) return;
+      setEraConfirmedQuestion(null);
+      setStep((current) => Math.max(0, current - 1));
+    };
+    window.addEventListener("era-questionnaire-navigation", handler);
+    return () => window.removeEventListener("era-questionnaire-navigation", handler);
+  }, [result]);
+
   // When result arrives, ask ERA to speak a summary once
   useEffect(() => {
     if (result && !greetedResult && typeof window.askERA === "function") {
       setGreetedResult(true);
-      const alloc = result.allocation_suggestion.map((a) => `${a.category} ${a.percentage}%`).join(", ");
+      const alloc = result.allocation_suggestion
+        .map((a) => `${a.asset_class} ${a.allocation_percentage}%`)
+        .join(", ");
       const prompt = `${t("era_result_summary_prompt")} Explain this as a final concise summary. Do not ask the customer a question or expect another answer.\n\nAssessment result:\n- Horizon: ${result.horizon}\n- Risk profile: ${result.risk_profile}\n- Score: ${result.total_score}/20\n- Suggested allocation: ${alloc}`;
       window.eraMoveOn?.();
       setTimeout(() => window.askERA(prompt, { displayUser: false, expectResponse: false }), 700);
@@ -150,6 +164,7 @@ export default function Objectives() {
           answers: Object.entries(answers).map(([question_id, value]) => ({ question_id, value })),
         };
         const res = await submitQuestionnaire(payload);
+        sessionStorage.setItem("eurobank-customer-profile", JSON.stringify(res));
         setResult(res);
         toast.success("Objectives assessment complete", {
           description: `Recommended horizon: ${res.horizon}`,
@@ -249,7 +264,7 @@ export default function Objectives() {
                 </p>
               </div>
               <Link
-                to={`/products?recommended=true&risk=${encodeURIComponent(result.risk_profile)}&horizon=${encodeURIComponent(result.horizon)}`}
+                to={`/products?recommended=true&risk=${encodeURIComponent(result.risk_profile)}&horizon=${encodeURIComponent(result.horizon)}&profile=${encodeURIComponent(result.profile_id)}`}
                 data-testid="view-recommended-products"
                 className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-white text-[var(--primary)] text-sm font-bold hover:bg-white/90 transition-colors whitespace-nowrap"
               >
@@ -263,16 +278,16 @@ export default function Objectives() {
               </div>
               <div className="space-y-3">
                 {result.allocation_suggestion.map((a) => (
-                  <div key={a.category} data-testid={`alloc-${a.category}`}>
+                  <div key={a.asset_class} data-testid={`alloc-${a.asset_class}`}>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-[var(--primary)] font-medium">{a.category}</span>
-                      <span className="font-mono-num text-[var(--text-secondary)]">{a.percentage}%</span>
+                      <span className="text-[var(--primary)] font-medium">{a.asset_class}</span>
+                      <span className="font-mono-num text-[var(--text-secondary)]">{a.allocation_percentage}%</span>
                     </div>
                     <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{
-                          width: `${a.percentage}%`,
+                          width: `${a.allocation_percentage}%`,
                           background: `linear-gradient(90deg, ${HORIZON_COLORS[result.horizon]}, #007AFF)`,
                         }}
                       />

@@ -17,7 +17,7 @@ export const ERAPanel = () => {
     speaking,
     streaming,
     voiceEnabled,
-    setVoiceEnabled,
+    toggleVoice,
     sendMessage,
     toggleListen,
     t,
@@ -90,12 +90,23 @@ export const ERAPanel = () => {
             <ArrowRight size={12} className="text-[var(--accent)] era-callout-arrow" />
           </div>
 
-          <div
-            className="era-gesture"
+          <button
+            type="button"
+            data-testid="era-avatar-voice-toggle"
+            onClick={toggleVoice}
+            aria-pressed={!voiceEnabled}
+            aria-label={voiceEnabled ? "Stop Era speaking" : "Enable Era speaking"}
+            title={voiceEnabled ? "Click Era to stop speaking" : "Click Era to enable speaking"}
+            className="era-gesture relative"
             style={{ transform: gestureTransform, transition: "transform 0.6s cubic-bezier(.4,1.4,.6,1)" }}
           >
-            <ERAAvatar size={280} speaking={speaking} listening={listening} />
-          </div>
+            <ERAAvatar size={230} speaking={speaking} listening={listening} />
+            {!voiceEnabled && (
+              <span className="absolute bottom-5 right-5 z-30 h-9 w-9 rounded-full bg-white/95 border border-[var(--border)] shadow-md flex items-center justify-center">
+                <VolumeX size={17} className="text-[var(--text-secondary)]" />
+              </span>
+            )}
+          </button>
         </div>
         <div className="-mt-1 text-center">
           <div className="flex items-center justify-center gap-3">
@@ -204,10 +215,7 @@ export const ERAPanel = () => {
         <button
           type="button"
           data-testid="era-panel-voice-toggle"
-          onClick={() => {
-            setVoiceEnabled(!voiceEnabled);
-            if (voiceEnabled) window.speechSynthesis?.cancel();
-          }}
+          onClick={toggleVoice}
           className="h-10 w-10 rounded-full bg-white border border-[var(--border)] flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
         >
           {voiceEnabled ? (

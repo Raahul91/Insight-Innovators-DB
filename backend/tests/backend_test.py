@@ -99,12 +99,15 @@ class TestQuestionnaire:
 
     def test_submit_mid_score(self, api_client):
         payload = self._build_answers(api_client, 3)
+        next(answer for answer in payload["answers"] if answer["question_id"] == "q2")["value"] = 2
         r = api_client.post(f"{API}/questionnaire/submit", json=payload, timeout=15)
         assert r.status_code == 200
         d = r.json()
-        assert d["total_score"] == 15
+        assert d["total_score"] == 14
         assert d["horizon"] == "Medium-term"
         assert d["risk_profile"] == "Balanced"
+        assert d["profile_id"] == "medium-balanced"
+        assert all("asset_class" in item and "products" in item for item in d["allocation_suggestion"])
 
     def test_submit_high_score(self, api_client):
         payload = self._build_answers(api_client, 4)

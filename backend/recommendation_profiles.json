@@ -1,0 +1,365 @@
+[
+  {
+    "horizon": "Short-term",
+    "risk_profile": "Conservative",
+    "recommendation": "Focus entirely on capital preservation and liquidity. Exposure is heavily weighted towards short-term government bonds and money market funds to avoid market volatility.",
+    "allocation_suggestion": [
+      {
+        "asset_class": "Bonds",
+        "allocation_percentage": 70,
+        "products": [
+          { "product_id": "LU1650487413", "ticker": "PR13.DE", "name": "Amundi Euro Government Bond 1-3Y", "currency": "EUR", "current_price": 52.10, "risk_level": "Very Low" },
+          { "product_id": "IE00B3T9LM79", "ticker": "SYBB.DE", "name": "SPDR Bloomberg Euro Corporate Bond", "currency": "EUR", "current_price": 56.40, "risk_level": "Low" }
+        ]
+      },
+      {
+        "asset_class": "Mutual Funds",
+        "allocation_percentage": 25,
+        "products": [
+          { "product_id": "LU0043389872", "ticker": "PIME.LU", "name": "PIMCO Euro Short-Term Fund", "currency": "EUR", "current_price": 18.50, "risk_level": "Very Low" }
+        ]
+      },
+      {
+        "asset_class": "ETFs",
+        "allocation_percentage": 5,
+        "products": [
+          { "product_id": "IE00B0M62S72", "ticker": "IDVY.AS", "name": "iShares Euro Dividend", "currency": "EUR", "current_price": 22.45, "risk_level": "Medium-Low" }
+        ]
+      },
+      { "asset_class": "Stocks", "allocation_percentage": 0, "products": [] },
+      { "asset_class": "Crypto", "allocation_percentage": 0, "products": [] }
+    ]
+  },
+  {
+    "horizon": "Medium-term",
+    "risk_profile": "Conservative",
+    "recommendation": "Maintains a strong defensive posture with fixed income, but introduces a small allocation to blue-chip defensive equities and broad market ETFs to outpace inflation.",
+    "allocation_suggestion": [
+      {
+        "asset_class": "Bonds",
+        "allocation_percentage": 55,
+        "products": [
+          { "product_id": "IE00B4WXJJ64", "ticker": "SEGA.AS", "name": "iShares Core € Govt Bond", "currency": "EUR", "current_price": 114.30, "risk_level": "Low" },
+          { "product_id": "IE00B3F81R35", "ticker": "IEAC.AS", "name": "iShares Core € Corp Bond", "currency": "EUR", "current_price": 122.40, "risk_level": "Low-Medium" }
+        ]
+      },
+      {
+        "asset_class": "Mutual Funds",
+        "allocation_percentage": 20,
+        "products": [
+          { "product_id": "LU0119154699", "ticker": "ABEU.LU", "name": "AB European Income Portfolio", "currency": "EUR", "current_price": 22.40, "risk_level": "Medium-Low" }
+        ]
+      },
+      {
+        "asset_class": "ETFs",
+        "allocation_percentage": 15,
+        "products": [
+          { "product_id": "LU0274211217", "ticker": "XESC.DE", "name": "Xtrackers Euro Stoxx 50 UCITS", "currency": "EUR", "current_price": 68.90, "risk_level": "Medium-Low" }
+        ]
+      },
+      {
+        "asset_class": "Stocks",
+        "allocation_percentage": 10,
+        "products": [
+          { "product_id": "CH0038863350", "ticker": "NESN.SW", "name": "Nestlé S.A.", "currency": "CHF", "current_price": 95.60, "risk_level": "Low" },
+          { "product_id": "FR0000120578", "ticker": "SAN.PA", "name": "Sanofi S.A.", "currency": "EUR", "current_price": 88.90, "risk_level": "Medium-Low" }
+        ]
+      },
+      { "asset_class": "Crypto", "allocation_percentage": 0, "products": [] }
+    ]
+  },
+  {
+    "horizon": "Long-term",
+    "risk_profile": "Conservative",
+    "recommendation": "Designed for long-term capital preservation with steady income growth. Increased exposure to dividend-paying equities and a negligible crypto allocation for modern diversification.",
+    "allocation_suggestion": [
+      {
+        "asset_class": "Bonds",
+        "allocation_percentage": 45,
+        "products": [
+          { "product_id": "IE00B4WXJJ64", "ticker": "SEGA.AS", "name": "iShares Core € Govt Bond", "currency": "EUR", "current_price": 114.30, "risk_level": "Low" }
+        ]
+      },
+      {
+        "asset_class": "ETFs",
+        "allocation_percentage": 25,
+        "products": [
+          { "product_id": "IE00B0M62S72", "ticker": "IDVY.AS", "name": "iShares Euro Dividend", "currency": "EUR", "current_price": 22.45, "risk_level": "Medium-Low" },
+          { "product_id": "IE00B4L5Y983", "ticker": "SMEA.DE", "name": "iShares Core MSCI Europe", "currency": "EUR", "current_price": 76.50, "risk_level": "Medium" }
+        ]
+      },
+      {
+        "asset_class": "Stocks",
+        "allocation_percentage": 15,
+        "products": [
+          { "product_id": "GB00B10RZP78", "ticker": "ULVR.L", "name": "Unilever PLC", "currency": "GBP", "current_price": 42.10, "risk_level": "Medium-Low" },
+          { "product_id": "CH0012005267", "ticker": "NOVN.SW", "name": "Novartis AG", "currency": "CHF", "current_price": 98.40, "risk_level": "Low" }
+        ]
+      },
+      {
+        "asset_class": "Mutual Funds",
+        "allocation_percentage": 13,
+        "products": [
+          { "product_id": "LU0119154699", "ticker": "ABEU.LU", "name": "AB European Income Portfolio", "currency": "EUR", "current_price": 22.40, "risk_level": "Medium-Low" }
+        ]
+      },
+      {
+        "asset_class": "Crypto",
+        "allocation_percentage": 2,
+        "products": [
+          { "product_id": "BTC-EUR", "ticker": "BTC", "name": "Bitcoin", "currency": "EUR", "current_price": 58400.00, "risk_level": "Extreme" }
+        ]
+      }
+    ]
+  },
+  {
+    "horizon": "Short-term",
+    "risk_profile": "Balanced",
+    "recommendation": "A short-term strategy that balances the need for liquidity with moderate growth targets. Primarily utilizes high-grade corporate bonds and income-generating mutual funds.",
+    "allocation_suggestion": [
+      {
+        "asset_class": "Bonds",
+        "allocation_percentage": 40,
+        "products": [
+          { "product_id": "IE00B3F81R35", "ticker": "IEAC.AS", "name": "iShares Core € Corp Bond", "currency": "EUR", "current_price": 122.40, "risk_level": "Low-Medium" }
+        ]
+      },
+      {
+        "asset_class": "Mutual Funds",
+        "allocation_percentage": 25,
+        "products": [
+          { "product_id": "LU0043389872", "ticker": "PIME.LU", "name": "PIMCO Euro Short-Term Fund", "currency": "EUR", "current_price": 18.50, "risk_level": "Very Low" }
+        ]
+      },
+      {
+        "asset_class": "ETFs",
+        "allocation_percentage": 20,
+        "products": [
+          { "product_id": "LU0274211217", "ticker": "XESC.DE", "name": "Xtrackers Euro Stoxx 50 UCITS", "currency": "EUR", "current_price": 68.90, "risk_level": "Medium-Low" }
+        ]
+      },
+      {
+        "asset_class": "Stocks",
+        "allocation_percentage": 15,
+        "products": [
+          { "product_id": "FR0000120271", "ticker": "TTE.PA", "name": "TotalEnergies SE", "currency": "EUR", "current_price": 62.40, "risk_level": "Medium" }
+        ]
+      },
+      { "asset_class": "Crypto", "allocation_percentage": 0, "products": [] }
+    ]
+  },
+  {
+    "horizon": "Medium-term",
+    "risk_profile": "Balanced",
+    "recommendation": "A balanced mix of growth and income assets suits your profile. Diversify across equities and fixed income.",
+    "allocation_suggestion": [
+      {
+        "asset_class": "Stocks",
+        "allocation_percentage": 35,
+        "products": [
+          { "product_id": "DE0007236101", "ticker": "SIE.DE", "name": "Siemens AG", "currency": "EUR", "current_price": 178.50, "risk_level": "Medium" },
+          { "product_id": "FR0000131104", "ticker": "BNP.PA", "name": "BNP Paribas SA", "currency": "EUR", "current_price": 65.20, "risk_level": "Medium" },
+          { "product_id": "FR0000120321", "ticker": "OR.PA", "name": "L'Oréal S.A.", "currency": "EUR", "current_price": 412.30, "risk_level": "Medium" }
+        ]
+      },
+      {
+        "asset_class": "ETFs",
+        "allocation_percentage": 25,
+        "products": [
+          { "product_id": "IE00B4L5Y983", "ticker": "SMEA.DE", "name": "iShares Core MSCI Europe UCITS", "currency": "EUR", "current_price": 76.50, "risk_level": "Medium" }
+        ]
+      },
+      {
+        "asset_class": "Mutual Funds",
+        "allocation_percentage": 20,
+        "products": [
+          { "product_id": "LU0171283459", "ticker": "BGF.LU", "name": "BlackRock Global Allocation Fund", "currency": "EUR", "current_price": 54.20, "risk_level": "Medium" }
+        ]
+      },
+      {
+        "asset_class": "Bonds",
+        "allocation_percentage": 15,
+        "products": [
+          { "product_id": "IE00B3F81R35", "ticker": "IEAC.AS", "name": "iShares Core € Corp Bond", "currency": "EUR", "current_price": 122.40, "risk_level": "Low-Medium" }
+        ]
+      },
+      {
+        "asset_class": "Crypto",
+        "allocation_percentage": 5,
+        "products": [
+          { "product_id": "ETH-EUR", "ticker": "ETH", "name": "Ethereum", "currency": "EUR", "current_price": 2850.00, "risk_level": "Extreme" }
+        ]
+      }
+    ]
+  },
+  {
+    "horizon": "Long-term",
+    "risk_profile": "Balanced",
+    "recommendation": "Capitalizes on a long-term horizon to capture equity market premiums while maintaining a reliable fixed-income anchor. Increases exposure to thematic ETFs and major cryptocurrencies.",
+    "allocation_suggestion": [
+      {
+        "asset_class": "Stocks",
+        "allocation_percentage": 45,
+        "products": [
+          { "product_id": "NL0010273215", "ticker": "ASML.AS", "name": "ASML Holding NV", "currency": "EUR", "current_price": 1589.60, "risk_level": "Very High" },
+          { "product_id": "DE0007236101", "ticker": "SIE.DE", "name": "Siemens AG", "currency": "EUR", "current_price": 178.50, "risk_level": "Medium" },
+          { "product_id": "ES0144580Y14", "ticker": "IBE.MC", "name": "Iberdrola, S.A.", "currency": "EUR", "current_price": 12.15, "risk_level": "Medium" }
+        ]
+      },
+      {
+        "asset_class": "ETFs",
+        "allocation_percentage": 25,
+        "products": [
+          { "product_id": "IE00B4L5Y983", "ticker": "SMEA.DE", "name": "iShares Core MSCI Europe", "currency": "EUR", "current_price": 76.50, "risk_level": "Medium" },
+          { "product_id": "IE00B5BMR087", "ticker": "IUSA.AS", "name": "iShares Core S&P 500 UCITS", "currency": "EUR", "current_price": 505.20, "risk_level": "Medium" }
+        ]
+      },
+      {
+        "asset_class": "Bonds",
+        "allocation_percentage": 12,
+        "products": [
+          { "product_id": "IE00B66F4759", "ticker": "IHYG.AS", "name": "iShares EUR High Yield Corp Bond", "currency": "EUR", "current_price": 95.20, "risk_level": "Medium-High" }
+        ]
+      },
+      {
+        "asset_class": "Mutual Funds",
+        "allocation_percentage": 10,
+        "products": [
+          { "product_id": "LU0171283459", "ticker": "BGF.LU", "name": "BlackRock Global Allocation Fund", "currency": "EUR", "current_price": 54.20, "risk_level": "Medium" }
+        ]
+      },
+      {
+        "asset_class": "Crypto",
+        "allocation_percentage": 8,
+        "products": [
+          { "product_id": "BTC-EUR", "ticker": "BTC", "name": "Bitcoin", "currency": "EUR", "current_price": 58400.00, "risk_level": "Extreme" },
+          { "product_id": "ETH-EUR", "ticker": "ETH", "name": "Ethereum", "currency": "EUR", "current_price": 2850.00, "risk_level": "Extreme" }
+        ]
+      }
+    ]
+  },
+  {
+    "horizon": "Short-term",
+    "risk_profile": "Aggressive",
+    "recommendation": "A tactical, high-risk allocation intended for investors looking to exploit short-term market inefficiencies using high-beta stocks, tech ETFs, and volatile assets.",
+    "allocation_suggestion": [
+      {
+        "asset_class": "Stocks",
+        "allocation_percentage": 40,
+        "products": [
+          { "product_id": "NL0011585146", "ticker": "RACE.MI", "name": "Ferrari N.V.", "currency": "EUR", "current_price": 385.40, "risk_level": "High" },
+          { "product_id": "DE0007164600", "ticker": "SAP.DE", "name": "SAP SE", "currency": "EUR", "current_price": 131.14, "risk_level": "High" }
+        ]
+      },
+      {
+        "asset_class": "ETFs",
+        "allocation_percentage": 30,
+        "products": [
+          { "product_id": "DE000A0H08Q4", "ticker": "EXV3.DE", "name": "iShares STOXX Europe 600 Technology", "currency": "EUR", "current_price": 82.15, "risk_level": "High" }
+        ]
+      },
+      {
+        "asset_class": "Crypto",
+        "allocation_percentage": 15,
+        "products": [
+          { "product_id": "SOL-EUR", "ticker": "SOL", "name": "Solana", "currency": "EUR", "current_price": 145.20, "risk_level": "Extreme" }
+        ]
+      },
+      {
+        "asset_class": "Mutual Funds",
+        "allocation_percentage": 10,
+        "products": [
+          { "product_id": "LU0292096186", "ticker": "EUSM.LU", "name": "Fidelity European Dynamic Growth", "currency": "EUR", "current_price": 45.20, "risk_level": "High" }
+        ]
+      },
+      {
+        "asset_class": "Bonds",
+        "allocation_percentage": 5,
+        "products": [
+          { "product_id": "IE00B66F4759", "ticker": "IHYG.AS", "name": "iShares EUR High Yield Corp Bond", "currency": "EUR", "current_price": 95.20, "risk_level": "Medium-High" }
+        ]
+      }
+    ]
+  },
+  {
+    "horizon": "Medium-term",
+    "risk_profile": "Aggressive",
+    "recommendation": "Geared toward superior capital growth over a mid-length cycle. Heavy concentration in growth equities, luxury European brands, technology, and decentralized finance assets.",
+    "allocation_suggestion": [
+      {
+        "asset_class": "Stocks",
+        "allocation_percentage": 50,
+        "products": [
+          { "product_id": "NL0010273215", "ticker": "ASML.AS", "name": "ASML Holding NV", "currency": "EUR", "current_price": 1589.60, "risk_level": "Very High" },
+          { "product_id": "FR0000121014", "ticker": "MC.PA", "name": "LVMH", "currency": "EUR", "current_price": 459.25, "risk_level": "High" },
+          { "product_id": "DK0062498333", "ticker": "NOVO-B.CO", "name": "Novo Nordisk A/S", "currency": "DKK", "current_price": 328.00, "risk_level": "Very High" }
+        ]
+      },
+      {
+        "asset_class": "ETFs",
+        "allocation_percentage": 20,
+        "products": [
+          { "product_id": "IE00BGV5VN51", "ticker": "XAIX.DE", "name": "Xtrackers AI & Big Data UCITS", "currency": "EUR", "current_price": 105.40, "risk_level": "Very High" }
+        ]
+      },
+      {
+        "asset_class": "Crypto",
+        "allocation_percentage": 20,
+        "products": [
+          { "product_id": "BTC-EUR", "ticker": "BTC", "name": "Bitcoin", "currency": "EUR", "current_price": 58400.00, "risk_level": "Extreme" },
+          { "product_id": "ETH-EUR", "ticker": "ETH", "name": "Ethereum", "currency": "EUR", "current_price": 2850.00, "risk_level": "Extreme" }
+        ]
+      },
+      {
+        "asset_class": "Mutual Funds",
+        "allocation_percentage": 5,
+        "products": [
+          { "product_id": "LU0292096186", "ticker": "EUSM.LU", "name": "Fidelity European Dynamic Growth", "currency": "EUR", "current_price": 45.20, "risk_level": "High" }
+        ]
+      },
+      {
+        "asset_class": "Bonds",
+        "allocation_percentage": 5,
+        "products": [
+          { "product_id": "IE00B66F4759", "ticker": "IHYG.AS", "name": "iShares EUR High Yield Corp Bond", "currency": "EUR", "current_price": 95.20, "risk_level": "Medium-High" }
+        ]
+      }
+    ]
+  },
+  {
+    "horizon": "Long-term",
+    "risk_profile": "Aggressive",
+    "recommendation": "Aggressive growth, maximize returns. Designed to absorb severe volatility in exchange for maximum compounding over a decade or more. Zero reliance on traditional fixed-income debt.",
+    "allocation_suggestion": [
+      {
+        "asset_class": "Stocks",
+        "allocation_percentage": 55,
+        "products": [
+          { "product_id": "NL0010273215", "ticker": "ASML.AS", "name": "ASML Holding NV", "currency": "EUR", "current_price": 1589.60, "risk_level": "Very High" },
+          { "product_id": "DK0062498333", "ticker": "NOVO-B.CO", "name": "Novo Nordisk A/S", "currency": "DKK", "current_price": 328.00, "risk_level": "Very High" },
+          { "product_id": "DE0006231004", "ticker": "IFX.DE", "name": "Infineon Technologies AG", "currency": "EUR", "current_price": 35.80, "risk_level": "High" },
+          { "product_id": "FR0000121014", "ticker": "MC.PA", "name": "LVMH", "currency": "EUR", "current_price": 459.25, "risk_level": "High" }
+        ]
+      },
+      {
+        "asset_class": "Crypto",
+        "allocation_percentage": 25,
+        "products": [
+          { "product_id": "BTC-EUR", "ticker": "BTC", "name": "Bitcoin", "currency": "EUR", "current_price": 58400.00, "risk_level": "Extreme" },
+          { "product_id": "ETH-EUR", "ticker": "ETH", "name": "Ethereum", "currency": "EUR", "current_price": 2850.00, "risk_level": "Extreme" },
+          { "product_id": "SOL-EUR", "ticker": "SOL", "name": "Solana", "currency": "EUR", "current_price": 145.20, "risk_level": "Extreme" }
+        ]
+      },
+      {
+        "asset_class": "ETFs",
+        "allocation_percentage": 20,
+        "products": [
+          { "product_id": "IE00BGV5VN51", "ticker": "XAIX.DE", "name": "Xtrackers AI & Big Data UCITS", "currency": "EUR", "current_price": 105.40, "risk_level": "Very High" },
+          { "product_id": "DE000A0H08Q4", "ticker": "EXV3.DE", "name": "iShares STOXX Europe 600 Technology", "currency": "EUR", "current_price": 82.15, "risk_level": "High" }
+        ]
+      },
+      { "asset_class": "Mutual Funds", "allocation_percentage": 0, "products": [] },
+      { "asset_class": "Bonds", "allocation_percentage": 0, "products": [] }
+    ]
+  }
+]

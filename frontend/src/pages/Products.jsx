@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { fetchProducts } from "../lib/api";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { fetchProducts, fetchRecommendationProfile } from "../lib/api";
 import { fmtCurrency, fmtPct } from "../lib/format";
 import { Search, TrendingUp, TrendingDown } from "lucide-react";
-import { toast } from "sonner";
 
 const CATEGORIES = ["All", "Stocks", "Mutual Funds", "ETFs", "Bonds", "Crypto"];
+const fmtProductPrice = (product) =>
+  product.currency
+    ? new Intl.NumberFormat("en-IE", {
+        style: "currency",
+        currency: product.currency,
+        maximumFractionDigits: 2,
+      }).format(product.price)
+    : fmtCurrency(product.price);
 
 const RiskBadge = ({ level }) => {
   const map = {
@@ -13,43 +20,75 @@ const RiskBadge = ({ level }) => {
     Medium: "bg-[#F59E0B]/10 text-[#B45309]",
     High: "bg-[var(--danger)]/10 text-[var(--danger)]",
   };
+  const fallback =
+    level?.includes("Low") || level === "Very Low"
+      ? "bg-[var(--success)]/10 text-[var(--success)]"
+      : level?.includes("High") || level === "Extreme"
+      ? "bg-[var(--danger)]/10 text-[var(--danger)]"
+      : "bg-[#F59E0B]/10 text-[#B45309]";
   return (
-    <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${map[level]}`}>
+    <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${map[level] || fallback}`}>
       {level}
     </span>
   );
 };
 
 export default function Products() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const recommended = searchParams.get("recommended") === "true";
   const profileRisk = searchParams.get("risk");
   const profileHorizon = searchParams.get("horizon");
   const [category, setCategory] = useState("All");
   const [products, setProducts] = useState([]);
+  const [recommendationProfile, setRecommendationProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
 
+  const startOrder = (product) => {
+    sessionStorage.setItem("eurobank-selected-product", JSON.stringify(product));
+    navigate(`/order?product=${encodeURIComponent(product.product_id || product.id)}`, {
+      state: { product },
+    });
+  };
+
   useEffect(() => {
     setLoading(true);
+    if (recommended && profileRisk && profileHorizon) {
+      fetchRecommendationProfile(profileHorizon, profileRisk)
+        .then((profile) => {
+          setRecommendationProfile(profile);
+          const recommendedProducts = profile.allocation_suggestion.flatMap((allocation) =>
+            allocation.products.map((product) => ({
+              ...product,
+              id: product.product_id,
+              category: allocation.asset_class,
+              price: product.current_price,
+              risk: product.risk_level,
+              allocation_percentage: allocation.allocation_percentage,
+            })),
+          );
+          setProducts(recommendedProducts);
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
+    setRecommendationProfile(null);
     fetchProducts(category)
       .then(setProducts)
       .finally(() => setLoading(false));
-  }, [category]);
+  }, [category, recommended, profileRisk, profileHorizon]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const searched = !q ? products : products.filter(
       (p) => p.name.toLowerCase().includes(q) || p.ticker.toLowerCase().includes(q),
     );
-    if (!recommended || !profileRisk) return searched;
-    const allowedRisk = {
-      Conservative: ["Low"],
-      Balanced: ["Low", "Medium"],
-      Aggressive: ["Medium", "High"],
-    }[profileRisk] || ["Low", "Medium", "High"];
-    return searched.filter((product) => allowedRisk.includes(product.risk));
-  }, [products, query, recommended, profileRisk]);
+    if (!recommended) return searched;
+    return category === "All"
+      ? searched
+      : searched.filter((product) => product.category === category);
+  }, [products, query, recommended, category]);
 
   return (
     <div className="p-6 md:p-10 fade-up" data-testid="products-page">
@@ -65,7 +104,8 @@ export default function Products() {
             {profileRisk} profile · {profileHorizon || "Personalised"} horizon
           </div>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Showing products with risk levels aligned to your completed assessment.
+            {recommendationProfile?.recommendation ||
+              "Showing products aligned to your completed financial-objectives assessment."}
           </p>
         </div>
       )}
@@ -125,31 +165,32 @@ export default function Products() {
 
                 <div className="flex items-baseline gap-2 mb-4">
                   <span className="font-display font-black text-2xl text-[var(--primary)] font-mono-num">
-                    {fmtCurrency(p.price)}
+                    {fmtProductPrice(p)}
                   </span>
-                  <span
-                    className={`text-sm font-medium font-mono-num flex items-center gap-1 ${
-                      positive ? "text-[var(--success)]" : "text-[var(--danger)]"
-                    }`}
-                  >
-                    {positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                    {fmtPct(p.ytd_return)} YTD
-                  </span>
+                  {p.ytd_return !== undefined && (
+                    <span
+                      className={`text-sm font-medium font-mono-num flex items-center gap-1 ${
+                        positive ? "text-[var(--success)]" : "text-[var(--danger)]"
+                      }`}
+                    >
+                      {positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                      {fmtPct(p.ytd_return)} YTD
+                    </span>
+                  )}
                 </div>
 
                 <p className="text-sm text-[var(--text-secondary)] mb-4 leading-relaxed line-clamp-2">
-                  {p.description}
+                  {p.description ||
+                    `${p.category} recommendation · ${p.allocation_percentage}% target allocation · ${p.currency}`}
                 </p>
 
                 <div className="flex items-center justify-between text-xs pt-4 border-t border-[var(--border)]">
                   <div>
                     <div className="text-[var(--text-secondary)] mb-0.5">1Y Return</div>
-                    <div
-                      className={`font-semibold font-mono-num ${
-                        p.one_year_return >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"
-                      }`}
-                    >
-                      {fmtPct(p.one_year_return)}
+                    <div className="font-semibold font-mono-num text-[var(--primary)]">
+                      {p.one_year_return !== undefined
+                        ? fmtPct(p.one_year_return)
+                        : p.currency}
                     </div>
                   </div>
                   {p.expense_ratio !== null && p.expense_ratio !== undefined && (
@@ -161,15 +202,11 @@ export default function Products() {
                     </div>
                   )}
                   <button
-                    data-testid={`invest-btn-${p.ticker}`}
-                    onClick={() =>
-                      toast.success(`Added ${p.ticker} to watchlist`, {
-                        description: `${p.name} · ${fmtCurrency(p.price)}`,
-                      })
-                    }
-                    className="px-4 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:bg-[var(--accent)] transition-colors"
+                    data-testid={`buy-btn-${p.ticker}`}
+                    onClick={() => startOrder(p)}
+                    className="px-5 py-2 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:bg-[var(--accent)] transition-colors"
                   >
-                    Watchlist
+                    Buy
                   </button>
                 </div>
               </div>

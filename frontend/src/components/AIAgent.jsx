@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Send, X, Volume2, VolumeX } from "lucide-react";
 import { ERAAvatar } from "./ERAAvatar";
@@ -8,6 +9,7 @@ import { useERA } from "./ERAContext";
  * Mobile / tablet floating variant of ERA (hidden on lg+, where ERAPanel takes over).
  */
 export const AIAgent = () => {
+  const location = useLocation();
   const {
     messages,
     input,
@@ -16,7 +18,7 @@ export const AIAgent = () => {
     speaking,
     streaming,
     voiceEnabled,
-    setVoiceEnabled,
+    toggleVoice,
     floatingOpen,
     setFloatingOpen,
     sendMessage,
@@ -25,6 +27,13 @@ export const AIAgent = () => {
   } = useERA();
 
   const scrollRef = useRef(null);
+  const sectionKey =
+    location.pathname === "/objectives"
+      ? "objectives"
+      : location.pathname === "/products"
+      ? "products"
+      : "dashboard";
+  const sectionCaption = t(`section_${sectionKey}`);
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, streaming]);
@@ -60,9 +69,22 @@ export const AIAgent = () => {
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/40">
               <div className="flex items-center gap-3">
-                <div className="h-14 w-14 flex-shrink-0">
+                <button
+                  type="button"
+                  data-testid="ai-agent-avatar-voice-toggle"
+                  onClick={toggleVoice}
+                  aria-pressed={!voiceEnabled}
+                  aria-label={voiceEnabled ? "Stop Era speaking" : "Enable Era speaking"}
+                  title={voiceEnabled ? "Click Era to stop speaking" : "Click Era to enable speaking"}
+                  className="relative h-14 w-14 flex-shrink-0"
+                >
                   <ERAAvatar size={56} speaking={speaking} listening={listening} />
-                </div>
+                  {!voiceEnabled && (
+                    <span className="absolute -bottom-1 -right-1 z-10 h-5 w-5 rounded-full bg-white border border-[var(--border)] flex items-center justify-center">
+                      <VolumeX size={11} className="text-[var(--text-secondary)]" />
+                    </span>
+                  )}
+                </button>
                 <div>
                   <div className="font-display font-bold text-[var(--primary)] leading-tight flex items-center gap-2">
                     ERA
@@ -73,15 +95,18 @@ export const AIAgent = () => {
                   <div className="text-xs text-[var(--text-secondary)]">
                     {streaming ? "…" : listening ? "◉ live" : speaking ? "♪" : t("era_role")}
                   </div>
+                  <div
+                    data-testid={`ai-agent-context-${sectionKey}`}
+                    className="mt-1 inline-flex max-w-[190px] rounded-full bg-[var(--accent)]/10 px-2.5 py-1 text-[10px] font-semibold text-[var(--accent)]"
+                  >
+                    {sectionCaption}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   data-testid="voice-toggle-btn"
-                  onClick={() => {
-                    setVoiceEnabled(!voiceEnabled);
-                    if (voiceEnabled) window.speechSynthesis?.cancel();
-                  }}
+                  onClick={toggleVoice}
                   className="h-8 w-8 rounded-full hover:bg-white/60 flex items-center justify-center"
                   title={voiceEnabled ? "Mute voice" : "Enable voice"}
                 >

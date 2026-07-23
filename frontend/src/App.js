@@ -10,12 +10,14 @@ import { ERAProvider } from "@/components/ERAContext";
 import Dashboard from "@/pages/Dashboard";
 import Objectives from "@/pages/Objectives";
 import Products from "@/pages/Products";
+import Order from "@/pages/Order";
 import { LanguageProvider } from "@/lib/language";
 
 const PAGE_META = {
   "/": { title: "Portfolio Overview", subtitle: "Dashboard" },
   "/objectives": { title: "Financial Objectives", subtitle: "Assessment" },
   "/products": { title: "Investment Options", subtitle: "Product Catalog" },
+  "/order": { title: "Place an Order", subtitle: "Trading" },
 };
 
 const Shell = () => {
@@ -23,7 +25,7 @@ const Shell = () => {
   const meta = PAGE_META[location.pathname] || PAGE_META["/"];
 
   return (
-    <div className="grain-overlay min-h-screen grid lg:grid-cols-[484px_minmax(0,1fr)] md:grid-cols-[260px_1fr] grid-cols-1 bg-[var(--bg)]">
+    <div className="grain-overlay min-h-screen grid lg:grid-cols-[360px_minmax(0,1fr)] md:grid-cols-[260px_1fr] grid-cols-1 bg-[var(--bg)]">
       {/* Laptop+ : compact ERA assistant rail; the active workspace stays primary */}
       <ERAPanel />
       {/* Mobile / tablet : keep the compact sidebar */}
@@ -38,6 +40,7 @@ const Shell = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/objectives" element={<Objectives />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/order" element={<Order />} />
           </Routes>
         </div>
         <AIAgent />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchPortfolio } from "../lib/api";
+import { fetchPortfolio, tradeHolding } from "../lib/api";
 import { fmtCurrency, fmtNumber, fmtPct } from "../lib/format";
 import {
   ResponsiveContainer,
@@ -15,6 +15,7 @@ import {
   Legend,
 } from "recharts";
 import { ArrowUpRight, ArrowDownRight, TrendingUp, Wallet, Activity, PieChart as PieIcon } from "lucide-react";
+import { toast } from "sonner";
 
 const COLORS = ["#0A2540", "#007AFF", "#34C759", "#F59E0B", "#8B5CF6"];
 
@@ -29,7 +30,9 @@ const StatCard = ({ label, value, delta, icon: Icon, testid, positive }) => (
         <Icon size={16} className="text-[var(--primary)]" />
       </div>
     </div>
-    <div className="font-display font-black text-3xl text-[var(--primary)] font-mono-num">{value}</div>
+    <div className="font-display font-black text-2xl xl:text-3xl text-[var(--primary)] font-mono-num whitespace-nowrap tracking-tight">
+      {value}
+    </div>
     {delta !== undefined && (
       <div
         className={`mt-2 text-sm font-medium flex items-center gap-1 ${
@@ -46,12 +49,37 @@ const StatCard = ({ label, value, delta, icon: Icon, testid, positive }) => (
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tradeQuantities, setTradeQuantities] = useState({});
+  const [tradingTicker, setTradingTicker] = useState(null);
 
   useEffect(() => {
     fetchPortfolio()
       .then(setData)
       .finally(() => setLoading(false));
   }, []);
+
+  const executeTrade = async (holding, side) => {
+    const quantity = Number(tradeQuantities[holding.ticker] ?? 1);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      toast.error("Enter a valid quantity.");
+      return;
+    }
+    if (side === "sell" && quantity > holding.shares) {
+      toast.error("Quantity exceeds the available position.");
+      return;
+    }
+    setTradingTicker(holding.ticker);
+    try {
+      const updatedPortfolio = await tradeHolding(holding.ticker, side, quantity);
+      setData(updatedPortfolio);
+      setTradeQuantities((values) => ({ ...values, [holding.ticker]: 1 }));
+      toast.success(`${side === "buy" ? "Bought" : "Sold"} ${quantity} ${holding.ticker}`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "The position could not be updated.");
+    } finally {
+      setTradingTicker(null);
+    }
+  };
 
   if (loading || !data) {
     return (
@@ -195,16 +223,18 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs table-fixed" data-testid="holdings-table">
             <thead className="bg-gray-50 text-[var(--text-secondary)]">
               <tr className="text-left">
-                <th className="px-6 py-3 font-medium">Asset</th>
-                <th className="px-6 py-3 font-medium">Category</th>
-                <th className="px-6 py-3 font-medium text-right">Shares</th>
-                <th className="px-6 py-3 font-medium text-right">Avg Cost</th>
-                <th className="px-6 py-3 font-medium text-right">Price</th>
-                <th className="px-6 py-3 font-medium text-right">Value</th>
-                <th className="px-6 py-3 font-medium text-right">Day</th>
+                <th className="w-[15%] px-3 py-3 font-medium">Asset</th>
+                <th className="w-[9%] px-2 py-3 font-medium">Category</th>
+                <th className="w-[10%] px-2 py-3 font-medium text-right">Quantity</th>
+                <th className="w-[10%] px-2 py-3 font-medium text-right">Avg Cost</th>
+                <th className="w-[9%] px-2 py-3 font-medium text-right">Price</th>
+                <th className="w-[11%] px-2 py-3 font-medium text-right">Value</th>
+                <th className="w-[8%] px-2 py-3 font-medium text-right">Day</th>
+                <th className="w-[12%] px-2 py-3 font-medium text-right">Trade Qty</th>
+                <th className="w-[16%] px-3 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -217,23 +247,60 @@ export default function Dashboard() {
                     data-testid={`holding-row-${h.ticker}`}
                     className="border-t border-[var(--border)] hover:bg-gray-50/60 transition-colors"
                   >
-                    <td className="px-6 py-4">
-                      <div className="font-display font-bold text-[var(--primary)]">{h.ticker}</div>
-                      <div className="text-xs text-[var(--text-secondary)]">{h.name}</div>
+                    <td className="px-3 py-3 min-w-0">
+                      <div className="font-display font-bold text-[var(--primary)] truncate">{h.ticker}</div>
+                      <div className="text-[10px] text-[var(--text-secondary)] truncate" title={h.name}>{h.name}</div>
                     </td>
-                    <td className="px-6 py-4 text-[var(--text-secondary)]">{h.category}</td>
-                    <td className="px-6 py-4 text-right font-mono-num">{fmtNumber(h.shares, h.shares < 1 ? 4 : 2)}</td>
-                    <td className="px-6 py-4 text-right font-mono-num text-[var(--text-secondary)]">
+                    <td className="px-2 py-3 text-[var(--text-secondary)] truncate" title={h.category}>{h.category}</td>
+                    <td className="px-2 py-3 text-right font-mono-num">{fmtNumber(h.shares, h.shares < 1 ? 4 : 2)}</td>
+                    <td className="px-2 py-3 text-right font-mono-num text-[var(--text-secondary)]">
                       {fmtCurrency(h.avg_cost)}
                     </td>
-                    <td className="px-6 py-4 text-right font-mono-num">{fmtCurrency(h.current_price)}</td>
-                    <td className="px-6 py-4 text-right font-mono-num font-semibold">{fmtCurrency(value)}</td>
+                    <td className="px-2 py-3 text-right font-mono-num">{fmtCurrency(h.current_price)}</td>
+                    <td className="px-2 py-3 text-right font-mono-num font-semibold">{fmtCurrency(value)}</td>
                     <td
-                      className={`px-6 py-4 text-right font-mono-num font-medium ${
+                      className={`px-2 py-3 text-right font-mono-num font-medium ${
                         positive ? "text-[var(--success)]" : "text-[var(--danger)]"
                       }`}
                     >
                       {fmtPct(h.day_change_pct)}
+                    </td>
+                    <td className="px-2 py-3 text-right">
+                      <input
+                        data-testid={`trade-quantity-${h.ticker}`}
+                        type="number"
+                        min="0.0001"
+                        max={h.shares}
+                        step={h.shares < 1 ? "0.0001" : "1"}
+                        value={tradeQuantities[h.ticker] ?? 1}
+                        onChange={(event) =>
+                          setTradeQuantities((values) => ({
+                            ...values,
+                            [h.ticker]: event.target.value,
+                          }))
+                        }
+                        className="w-full max-w-[76px] h-8 rounded-lg border border-[var(--border)] px-2 text-right font-mono-num outline-none focus:border-[var(--accent)]"
+                      />
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          data-testid={`holding-buy-${h.ticker}`}
+                          disabled={tradingTicker === h.ticker}
+                          onClick={() => executeTrade(h, "buy")}
+                          className="px-2.5 py-1.5 rounded-full bg-[var(--primary)] text-white text-[10px] font-bold disabled:opacity-40"
+                        >
+                          Buy
+                        </button>
+                        <button
+                          data-testid={`holding-sell-${h.ticker}`}
+                          disabled={tradingTicker === h.ticker}
+                          onClick={() => executeTrade(h, "sell")}
+                          className="px-2.5 py-1.5 rounded-full border border-[var(--danger)] text-[var(--danger)] text-[10px] font-bold disabled:opacity-40"
+                        >
+                          Sell
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
