@@ -1,4 +1,4 @@
-import { Bell, Search, ChevronDown, Globe, LayoutDashboard, Target, TrendingUp } from "lucide-react";
+import { Bell, ChevronDown, Globe, LayoutDashboard, Target, TrendingUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { LANGS, useLanguage } from "../lib/language";
@@ -67,9 +67,9 @@ export const TopHeader = ({ title, subtitle }) => {
   return (
     <header
       data-testid="top-header"
-      className="flex items-center justify-between px-6 md:px-10 py-6 border-b border-[var(--border)] bg-white/70 backdrop-blur sticky top-0 z-20 gap-4 flex-wrap"
+      className="flex items-center justify-between px-6 md:px-10 py-6 border-b border-[var(--border)] bg-white/70 backdrop-blur sticky top-0 z-20 gap-4 flex-wrap lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:flex-nowrap"
     >
-      <div className="min-w-0">
+      <div className="min-w-0 lg:justify-self-start">
         <div className="text-[11px] tracking-[0.2em] uppercase text-[var(--text-secondary)]">
           {subtitle} · EUR
         </div>
@@ -78,8 +78,8 @@ export const TopHeader = ({ title, subtitle }) => {
         </h1>
       </div>
 
-      {/* Laptop nav pills — sidebar is hidden on lg+ */}
-      <nav className="hidden lg:flex items-center gap-1 order-3 lg:order-2 w-full lg:w-auto">
+      {/* Primary navigation remains available even when the assistant rail is visible. */}
+      <nav className="hidden md:flex items-center gap-1 order-3 md:order-3 lg:order-2 w-full lg:w-auto lg:justify-self-start">
         {NAV.map(({ to, label, icon: Icon, testid }) => (
           <NavLink
             key={to}
@@ -100,15 +100,10 @@ export const TopHeader = ({ title, subtitle }) => {
         ))}
       </nav>
 
-      <div className="flex items-center gap-3 order-2 lg:order-3">
-        <div className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-full border border-[var(--border)] bg-white text-sm text-[var(--text-secondary)] w-56">
-          <Search size={16} />
-          <input
-            data-testid="header-search"
-            placeholder="Search UCITS ETFs, stocks…"
-            className="bg-transparent outline-none flex-1 text-[var(--text-primary)]"
-          />
-        </div>
+      <div
+        data-testid="profile-settings"
+        className="flex items-center gap-3 order-2 lg:order-3 ml-auto lg:ml-0 lg:justify-self-end rounded-2xl border border-[var(--border)] bg-white/85 px-2 py-1.5 shadow-sm"
+      >
         <LangSelector />
         <button
           data-testid="notifications-btn"

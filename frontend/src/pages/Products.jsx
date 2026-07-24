@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { fetchProducts, fetchRecommendationProfile } from "../lib/api";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { fetchCurrentRecommendation, fetchRecommendationProfile } from "../lib/api";
 import { fmtCurrency, fmtPct } from "../lib/format";
 import { Search, TrendingUp, TrendingDown } from "lucide-react";
 
@@ -42,8 +42,35 @@ export default function Products() {
   const [category, setCategory] = useState("All");
   const [products, setProducts] = useState([]);
   const [recommendationProfile, setRecommendationProfile] = useState(null);
+  const [profileUnavailable, setProfileUnavailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const hasExplicitProfile = recommended && profileRisk && profileHorizon;
+
+  const rankRecommendedProducts = (profile) =>
+    (profile.allocation_suggestion || [])
+      .flatMap((allocation, allocationIndex) =>
+        (allocation.products || []).map((product, productIndex) => ({
+          ...product,
+          id: product.product_id,
+          category: allocation.asset_class,
+          price: product.current_price,
+          risk: product.risk_level,
+          allocation_percentage: allocation.allocation_percentage,
+          allocationIndex,
+          productIndex,
+        })),
+      )
+      .sort(
+        (left, right) =>
+          right.allocation_percentage - left.allocation_percentage ||
+          left.allocationIndex - right.allocationIndex ||
+          left.productIndex - right.productIndex,
+      )
+      .map(({ allocationIndex, productIndex, ...product }, index) => ({
+        ...product,
+        recommendation_rank: index + 1,
+      }));
 
   const startOrder = (product) => {
     sessionStorage.setItem("eurobank-selected-product", JSON.stringify(product));
@@ -54,45 +81,65 @@ export default function Products() {
 
   useEffect(() => {
     setLoading(true);
-    if (recommended && profileRisk && profileHorizon) {
-      fetchRecommendationProfile(profileHorizon, profileRisk)
+    const profileRequest = hasExplicitProfile
+      ? fetchRecommendationProfile(profileHorizon, profileRisk)
+      : fetchCurrentRecommendation();
+
+    profileRequest
         .then((profile) => {
+          setProfileUnavailable(false);
           setRecommendationProfile(profile);
-          const recommendedProducts = profile.allocation_suggestion.flatMap((allocation) =>
-            allocation.products.map((product) => ({
-              ...product,
-              id: product.product_id,
-              category: allocation.asset_class,
-              price: product.current_price,
-              risk: product.risk_level,
-              allocation_percentage: allocation.allocation_percentage,
-            })),
-          );
-          setProducts(recommendedProducts);
+          setProducts(rankRecommendedProducts(profile));
+        })
+        .catch(() => {
+          setRecommendationProfile(null);
+          setProducts([]);
+          setProfileUnavailable(true);
         })
         .finally(() => setLoading(false));
-      return;
-    }
-    setRecommendationProfile(null);
-    fetchProducts(category)
-      .then(setProducts)
-      .finally(() => setLoading(false));
-  }, [category, recommended, profileRisk, profileHorizon]);
+  }, [category, hasExplicitProfile, profileHorizon, profileRisk]);
+
+  const showingRecommendations = Boolean(recommendationProfile);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const searched = !q ? products : products.filter(
       (p) => p.name.toLowerCase().includes(q) || p.ticker.toLowerCase().includes(q),
     );
-    if (!recommended) return searched;
+    if (!showingRecommendations) return searched;
     return category === "All"
       ? searched
       : searched.filter((product) => product.category === category);
-  }, [products, query, recommended, category]);
+  }, [products, query, showingRecommendations, category]);
 
   return (
     <div className="p-6 md:p-10 fade-up" data-testid="products-page">
-      {recommended && profileRisk && (
+      {profileUnavailable && !loading && (
+        <section
+          data-testid="products-requires-objectives"
+          className="mx-auto max-w-2xl rounded-3xl border border-[var(--accent)]/20 bg-white px-7 py-10 text-center shadow-sm"
+        >
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
+            Personalised products
+          </div>
+          <h2 className="mt-3 font-display text-2xl font-black text-[var(--primary)]">
+            Complete Financial Objectives first
+          </h2>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-[var(--text-secondary)]">
+            We use your investment objective, time horizon, and risk profile to rank products that fit your selections.
+          </p>
+          <Link
+            to="/objectives"
+            data-testid="complete-objectives-link"
+            className="mt-6 inline-flex rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent)]"
+          >
+            Complete Financial Objectives
+          </Link>
+        </section>
+      )}
+      {!profileUnavailable && (
+        <>
+      {showingRecommendations && (
         <div
           data-testid="recommended-products-context"
           className="mb-6 rounded-2xl border border-[var(--accent)]/20 bg-[var(--accent)]/5 px-5 py-4"
@@ -101,7 +148,7 @@ export default function Products() {
             Recommended for your objectives
           </div>
           <div className="font-display font-bold text-xl text-[var(--primary)] mt-1">
-            {profileRisk} profile · {profileHorizon || "Personalised"} horizon
+            {recommendationProfile.risk_profile} profile · {recommendationProfile.horizon} horizon
           </div>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             {recommendationProfile?.recommendation ||
@@ -134,7 +181,7 @@ export default function Products() {
             data-testid="products-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search products…"
+            placeholder={showingRecommendations ? "Search your recommendations…" : "Search products…"}
             className="flex-1 bg-transparent outline-none text-sm"
           />
         </div>
@@ -153,6 +200,12 @@ export default function Products() {
                 data-testid={`product-card-${p.ticker}`}
                 className="bg-white border border-[var(--border)] rounded-xl p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
+                {showingRecommendations && (
+                  <div className="mb-3 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
+                    <span>Recommended #{p.recommendation_rank}</span>
+                    <span>{p.allocation_percentage}% target allocation</span>
+                  </div>
+                )}
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="font-display font-black text-xl text-[var(--primary)] leading-tight">
@@ -218,6 +271,8 @@ export default function Products() {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

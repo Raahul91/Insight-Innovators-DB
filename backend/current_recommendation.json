@@ -1,0 +1,75 @@
+{
+  "session_id": "256dcc88-1c6a-45a9-9bb6-48448731442a",
+  "updated_at": "2026-07-23T18:26:33.015104+00:00",
+  "total_score": 5,
+  "profile_id": "short-conservative",
+  "primary_objective": "Preserve capital and avoid losses",
+  "horizon": "Short-term",
+  "risk_profile": "Conservative",
+  "recommendation": "Focus entirely on capital preservation and liquidity. Exposure is heavily weighted towards short-term government bonds and money market funds to avoid market volatility.",
+  "allocation_suggestion": [
+    {
+      "asset_class": "Bonds",
+      "allocation_percentage": 70,
+      "products": [
+        {
+          "product_id": "LU1650487413",
+          "ticker": "PR13.DE",
+          "name": "Amundi Euro Government Bond 1-3Y",
+          "currency": "EUR",
+          "current_price": 52.1,
+          "risk_level": "Very Low"
+        },
+        {
+          "product_id": "IE00B3T9LM79",
+          "ticker": "SYBB.DE",
+          "name": "SPDR Bloomberg Euro Corporate Bond",
+          "currency": "EUR",
+          "current_price": 56.4,
+          "risk_level": "Low"
+        }
+      ]
+    },
+    {
+      "asset_class": "Mutual Funds",
+      "allocation_percentage": 25,
+      "products": [
+        {
+          "product_id": "LU0043389872",
+          "ticker": "PIME.LU",
+          "name": "PIMCO Euro Short-Term Fund",
+          "currency": "EUR",
+          "current_price": 18.5,
+          "risk_level": "Very Low"
+        }
+      ]
+    },
+    {
+      "asset_class": "ETFs",
+      "allocation_percentage": 5,
+      "products": [
+        {
+          "product_id": "IE00B0M62S72",
+          "ticker": "IDVY.AS",
+          "name": "iShares Euro Dividend",
+          "currency": "EUR",
+          "current_price": 22.45,
+          "risk_level": "Medium-Low"
+        }
+      ]
+    },
+    {
+      "asset_class": "Stocks",
+      "allocation_percentage": 0,
+      "products": []
+    },
+    {
+      "asset_class": "Crypto",
+      "allocation_percentage": 0,
+      "products": []
+    }
+  ],
+  "knowledge": "BEGINNER",
+  "experience": "Less than 1 year",
+  "esg_preference": "NO"
+}

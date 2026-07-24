@@ -7,6 +7,7 @@ import { TopHeader } from "@/components/TopHeader";
 import { AIAgent } from "@/components/AIAgent";
 import { ERAPanel } from "@/components/ERAPanel";
 import { ERAProvider } from "@/components/ERAContext";
+import { EraVoiceProvider } from "@/components/EraVoiceContext";
 import Dashboard from "@/pages/Dashboard";
 import Objectives from "@/pages/Objectives";
 import Products from "@/pages/Products";
@@ -53,10 +54,12 @@ function App() {
   return (
     <LanguageProvider>
       <BrowserRouter>
-        <ERAProvider>
-          <Shell />
-          <Toaster position="top-right" richColors />
-        </ERAProvider>
+        <EraVoiceProvider>
+          <ERAProvider>
+            <Shell />
+            <Toaster position="top-right" richColors />
+          </ERAProvider>
+        </EraVoiceProvider>
       </BrowserRouter>
     </LanguageProvider>
   );

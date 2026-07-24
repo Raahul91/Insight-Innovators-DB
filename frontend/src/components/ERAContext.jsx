@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { useLocation, useNavigate } from "react-router-dom";
 import { API } from "../lib/api";
 import { useLanguage } from "../lib/language";
+import { useEraVoice } from "./EraVoiceContext";
 
 const SESSION_KEY = "era-session-id";
 const getSessionId = () => {
@@ -52,6 +53,12 @@ const selectBestVoice = (voices, locale) => {
 
 export const ERAProvider = ({ children, portfolioContext = null }) => {
   const { code: langCode, label: langLabel, locale, t } = useLanguage();
+  const {
+    configured: openAIVoiceConfigured,
+    playText: playOpenAIVoice,
+    primeAudio,
+    stop: stopOpenAIVoice,
+  } = useEraVoice();
   const navigate = useNavigate();
   const location = useLocation();
   const [messages, setMessages] = useState([{ role: "assistant", content: t("era_intro") }]);
@@ -63,6 +70,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
   const [floatingOpen, setFloatingOpen] = useState(false);
   const recognitionRef = useRef(null);
   const recognitionSuppressedRef = useRef(false);
+  const shouldKeepListeningRef = useRef(false);
   const listeningTimerRef = useRef(null);
   const activeRequestRef = useRef(null);
   const speakRef = useRef(null);
@@ -84,15 +92,20 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
     }
   }, []);
 
+  const cancelSpeechOutput = useCallback(() => {
+    window.speechSynthesis?.cancel();
+    stopOpenAIVoice();
+  }, [stopOpenAIVoice]);
+
   const toggleVoice = useCallback(() => {
     setVoiceEnabled((enabled) => {
       if (enabled) {
-        window.speechSynthesis?.cancel();
+        cancelSpeechOutput();
         setSpeaking(false);
       }
       return !enabled;
     });
-  }, []);
+  }, [cancelSpeechOutput]);
 
   // Leaving Objectives or Products must terminate that page's conversation completely.
   useEffect(() => {
@@ -111,14 +124,14 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
     }
     activeRequestRef.current?.abort();
     activeRequestRef.current = null;
-    window.speechSynthesis?.cancel();
+    cancelSpeechOutput();
     delete window.eraQuestionnaireContext;
     setInput("");
     setListening(false);
     setSpeaking(false);
     setStreaming(false);
     setMessages([{ role: "assistant", content: t("era_intro") }]);
-  }, [location.pathname, clearListeningTimer, t]);
+  }, [location.pathname, clearListeningTimer, cancelSpeechOutput, t]);
 
   const isConfirmation = useCallback((text) => {
     const normalized = text
@@ -165,27 +178,75 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
 
   const speak = useCallback(
     (text, options = {}) => {
-      if (!voiceEnabled || !window.speechSynthesis) return;
+      if (!voiceEnabled) {
+        options.onComplete?.();
+        return;
+      }
       const listenAfter = options.listenAfter !== false;
+      const onComplete = options.onComplete;
 
-      const speakWithAvailableVoices = () => {
-        clearListeningTimer();
-        // Never let speech recognition capture Era's own voice or a stale final transcript.
-        recognitionSuppressedRef.current = true;
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.abort();
-          } catch (_) {
-            // Recognition may already be stopped.
-          }
+      clearListeningTimer();
+      // Never let speech recognition capture Era's own voice or a stale final transcript.
+      recognitionSuppressedRef.current = true;
+      shouldKeepListeningRef.current = false;
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (_) {
+          // Recognition may already be stopped.
         }
-        setListening(false);
-        window.speechSynthesis.cancel();
-        const spokenText = text
-          .replace(/[*_#`]/g, "")
-          .replace(/\bERA\b/g, "Era")
-          .replace(/\s+/g, " ")
-          .trim();
+      }
+      setListening(false);
+      cancelSpeechOutput();
+      const spokenText = text
+        .replace(/[*_#`]/g, "")
+        .replace(/\bERA\b/g, "Era")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const finishSpeaking = () => {
+        setSpeaking(false);
+        if (!listenAfter) {
+          recognitionSuppressedRef.current = true;
+          setListening(false);
+          onComplete?.();
+          return;
+        }
+        onComplete?.();
+        // Behave like a call assistant: after Era finishes, listen for the customer's reply.
+        setTimeout(() => {
+          const rec = recognitionRef.current;
+          if (!rec || streamingRef.current) return;
+          try {
+            recognitionSuppressedRef.current = false;
+            shouldKeepListeningRef.current = true;
+            rec.lang = locale;
+            rec.start();
+            setListening(true);
+            clearListeningTimer();
+            listeningTimerRef.current = setTimeout(() => {
+              recognitionSuppressedRef.current = true;
+              try {
+                rec.abort();
+              } catch (_) {
+                // Recognition may already have ended.
+              }
+              setListening(false);
+              const reminder = "I didn’t hear an answer. Could you please answer again?";
+              setMessages((m) => [...m, { role: "assistant", content: reminder }]);
+              speakRef.current?.(reminder);
+            }, 5000);
+          } catch (_) {
+            // Recognition may already be active or microphone permission may not be granted.
+          }
+        }, 450);
+      };
+
+      const speakWithBrowserVoice = () => {
+        if (!window.speechSynthesis) {
+          finishSpeaking();
+          return;
+        }
         const utter = new SpeechSynthesisUtterance(spokenText);
         utter.lang = locale;
         const match = selectBestVoice(window.speechSynthesis.getVoices(), locale);
@@ -194,40 +255,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         utter.pitch = 1.06;
         utter.volume = 1;
         utter.onstart = () => setSpeaking(true);
-        utter.onend = () => {
-          setSpeaking(false);
-          if (!listenAfter) {
-            recognitionSuppressedRef.current = true;
-            setListening(false);
-            return;
-          }
-          // Behave like a call assistant: after Era finishes, listen for the customer's reply.
-          setTimeout(() => {
-            const rec = recognitionRef.current;
-            if (!rec || streamingRef.current) return;
-            try {
-              recognitionSuppressedRef.current = false;
-              rec.lang = locale;
-              rec.start();
-              setListening(true);
-              clearListeningTimer();
-              listeningTimerRef.current = setTimeout(() => {
-                recognitionSuppressedRef.current = true;
-                try {
-                  rec.abort();
-                } catch (_) {
-                  // Recognition may already have ended.
-                }
-                setListening(false);
-                const reminder = "I didn’t hear an answer. Could you please answer again?";
-                setMessages((m) => [...m, { role: "assistant", content: reminder }]);
-                speakRef.current?.(reminder);
-              }, 5000);
-            } catch (_) {
-              // Recognition may already be active or microphone permission may not be granted.
-            }
-          }, 450);
-        };
+        utter.onend = finishSpeaking;
         utter.onerror = () => {
           recognitionSuppressedRef.current = false;
           setSpeaking(false);
@@ -235,29 +263,54 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         window.speechSynthesis.speak(utter);
       };
 
-      if (window.speechSynthesis.getVoices().length) {
-        speakWithAvailableVoices();
+      const speakWithAvailableBrowserVoice = () => {
+        if (window.speechSynthesis?.getVoices().length) {
+          speakWithBrowserVoice();
+          return;
+        }
+        // Chromium may populate system voices asynchronously on the first request.
+        let hasSpoken = false;
+        const speakOnce = () => {
+          if (hasSpoken) return;
+          hasSpoken = true;
+          speakWithBrowserVoice();
+        };
+        const handleVoicesChanged = () => {
+          window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
+          speakOnce();
+        };
+        window.speechSynthesis?.addEventListener("voiceschanged", handleVoicesChanged, { once: true });
+        setTimeout(() => {
+          window.speechSynthesis?.removeEventListener("voiceschanged", handleVoicesChanged);
+          speakOnce();
+        }, 500);
+      };
+
+      if (openAIVoiceConfigured !== false) {
+        let openAIVoiceStarted = false;
+        playOpenAIVoice(spokenText, {
+          onStart: () => {
+            openAIVoiceStarted = true;
+            setSpeaking(true);
+          },
+        })
+          .then(finishSpeaking)
+          .catch(() => {
+            setSpeaking(false);
+            if (!openAIVoiceStarted) speakWithAvailableBrowserVoice();
+          });
         return;
       }
-
-      // Chromium may populate system voices asynchronously on the first request.
-      let hasSpoken = false;
-      const speakOnce = () => {
-        if (hasSpoken) return;
-        hasSpoken = true;
-        speakWithAvailableVoices();
-      };
-      const handleVoicesChanged = () => {
-        window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
-        speakOnce();
-      };
-      window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged, { once: true });
-      setTimeout(() => {
-        window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
-        speakOnce();
-      }, 500);
+      speakWithAvailableBrowserVoice();
     },
-    [voiceEnabled, locale, clearListeningTimer],
+    [
+      voiceEnabled,
+      locale,
+      clearListeningTimer,
+      cancelSpeechOutput,
+      openAIVoiceConfigured,
+      playOpenAIVoice,
+    ],
   );
   speakRef.current = speak;
 
@@ -269,6 +322,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
       queuedInputRef.current = null;
       clearListeningTimer();
       recognitionSuppressedRef.current = true;
+      shouldKeepListeningRef.current = false;
       try {
         recognitionRef.current?.abort();
       } catch (_) {
@@ -282,12 +336,20 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         ...(displayUser ? [{ role: "user", content: text }] : []),
         { role: "assistant", content: confirmation },
       ]);
-      window.dispatchEvent(
-        new CustomEvent("era-questionnaire-action", {
-          detail: { ...action, confirmed: true },
-        }),
+      setTimeout(
+        () =>
+          speak(confirmation, {
+            listenAfter: false,
+            onComplete: () => {
+              window.dispatchEvent(
+                new CustomEvent("era-questionnaire-action", {
+                  detail: { ...action, confirmed: true },
+                }),
+              );
+            },
+          }),
+        150,
       );
-      setTimeout(() => speak(confirmation), 150);
       return true;
     },
     [isConfirmation, clearListeningTimer, speak],
@@ -310,8 +372,9 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         options.questionnaireContext || window.eraQuestionnaireContext || null;
       const normalizedCommand = text.toLowerCase().trim().replace(/[.,!?]/g, "");
 
-      // A customer may state the visible choice and confirm it in the same
-      // utterance, for example: "Balanced growth with moderate risk, yes please."
+      // A customer may state the visible choice in a natural sentence, for
+      // example: "I want to generate steady income." That is a complete
+      // answer and should not need a second confirmation.
       const normalizeOptionText = (value) =>
         String(value || "")
           .toLowerCase()
@@ -319,18 +382,31 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
           .trim()
           .replace(/\s+/g, " ");
       const normalizedAnswer = normalizeOptionText(text);
+      const hasNegativeIntent = /\b(no|not|don't|do not|wait|stop)\b/i.test(text);
+      const directOption = baseQuestionnaireContext?.options?.find((option) => {
+        const optionLabel = normalizeOptionText(option.label);
+        const answerWithoutLeadIn = normalizedAnswer
+          .replace(
+            /^(?:i want to|i want|my goal is|i would like to|i would like|please select|select|choose|go with|i prefer)\s+/,
+            "",
+          )
+          .replace(/\s+(?:please|thanks|thank you)$/i, "")
+          .trim();
+        return answerWithoutLeadIn === optionLabel;
+      });
       const combinedAffirmative =
         /\b(yes|yeah|yep|yup|ok|okay|sure|correct|confirm|confirmed|proceed)\b/i.test(normalizedAnswer) &&
-        !/\b(no|not|don't|do not|wait|stop)\b/i.test(text);
-      const affirmedOption = combinedAffirmative
+        !hasNegativeIntent;
+      const affirmedOption = directOption || (combinedAffirmative
         ? baseQuestionnaireContext?.options?.find((option) =>
             normalizedAnswer.includes(normalizeOptionText(option.label)),
           )
-        : null;
+        : null);
 
-      if (affirmedOption && baseQuestionnaireContext?.question_id) {
+      if (affirmedOption && !hasNegativeIntent && baseQuestionnaireContext?.question_id) {
         clearListeningTimer();
         recognitionSuppressedRef.current = true;
+        shouldKeepListeningRef.current = false;
         try {
           recognitionRef.current?.abort();
         } catch (_) {
@@ -345,19 +421,25 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
           ...(displayUser ? [{ role: "user", content: text }] : []),
           { role: "assistant", content: reply },
         ]);
-        window.dispatchEvent(
-          new CustomEvent("era-questionnaire-action", {
-            detail: {
-              question_id: baseQuestionnaireContext.question_id,
-              value: affirmedOption.value,
-              label: affirmedOption.label,
-              confidence: "high",
-              confirmed: true,
-              exact_match: true,
-            },
-          }),
+        const action = {
+          question_id: baseQuestionnaireContext.question_id,
+          value: affirmedOption.value,
+          label: affirmedOption.label,
+          confidence: "high",
+          confirmed: true,
+          exact_match: true,
+        };
+        setTimeout(
+          () =>
+            speak(reply, {
+              listenAfter: false,
+              onComplete: () =>
+                window.dispatchEvent(
+                  new CustomEvent("era-questionnaire-action", { detail: action }),
+                ),
+            }),
+          100,
         );
-        setTimeout(() => speak(reply, { listenAfter: false }), 100);
         return;
       }
 
@@ -372,7 +454,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         }
         activeRequestRef.current?.abort();
         activeRequestRef.current = null;
-        window.speechSynthesis?.cancel();
+        cancelSpeechOutput();
         setInput("");
         setListening(false);
         setSpeaking(false);
@@ -385,6 +467,53 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         action();
         setTimeout(() => speak(reply, { listenAfter: false }), 150);
       };
+
+      const endConversation = () => {
+        const reply =
+          "Thank you for your time. I’ll take you back to your portfolio now. If you need anything else, just ask me anytime.";
+        pendingActionRef.current = null;
+        queuedInputRef.current = null;
+        clearListeningTimer();
+        recognitionSuppressedRef.current = true;
+        shouldKeepListeningRef.current = false;
+        try {
+          recognitionRef.current?.abort();
+        } catch (_) {
+          // Recognition may already be stopped.
+        }
+        activeRequestRef.current?.abort();
+        activeRequestRef.current = null;
+        cancelSpeechOutput();
+        setInput("");
+        setListening(false);
+        setSpeaking(false);
+        setStreaming(false);
+        setMessages((m) => [
+          ...m,
+          ...(displayUser ? [{ role: "user", content: text }] : []),
+          { role: "assistant", content: reply },
+        ]);
+        setTimeout(
+          () =>
+            speak(reply, {
+              listenAfter: false,
+              onComplete: () => navigate("/"),
+            }),
+          150,
+        );
+      };
+
+      if (
+        /\b(?:i want to|i would like to|let me|please)?\s*(?:stop|end|quit|leave|exit|finish)\b.*\b(?:the )?(?:conversation|chat|talking|speaking|this)\b/i.test(
+          normalizedCommand,
+        ) ||
+        /\b(?:i(?:'m| am) (?:done|finished)|no more questions|that(?:'s| is) all)\b/i.test(
+          normalizedCommand,
+        )
+      ) {
+        endConversation();
+        return;
+      }
 
       if (
         /\b(go|come|move|take me|return)\b.*\b(back|previous|last)\b|\b(previous|last)\s+question\b|\bgo back\b/i.test(
@@ -475,6 +604,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         const decoder = new TextDecoder();
         let full = "";
         let buffer = "";
+        let confirmedAction = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -500,9 +630,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
             } else if (eventType === "questionnaire_action") {
               if (payload.confirmed) {
                 pendingActionRef.current = null;
-                window.dispatchEvent(
-                  new CustomEvent("era-questionnaire-action", { detail: payload }),
-                );
+                confirmedAction = payload;
               } else {
                 // Keep inferred recommendations pending until the customer explicitly confirms.
                 pendingActionRef.current = payload;
@@ -524,7 +652,21 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
             return copy;
           });
         }
-        if (full) speak(full, { listenAfter: expectResponse });
+        if (full) {
+          speak(full, {
+            listenAfter: confirmedAction ? false : expectResponse,
+            onComplete: confirmedAction
+              ? () =>
+                  window.dispatchEvent(
+                    new CustomEvent("era-questionnaire-action", { detail: confirmedAction }),
+                  )
+              : undefined,
+          });
+        } else if (confirmedAction) {
+          window.dispatchEvent(
+            new CustomEvent("era-questionnaire-action", { detail: confirmedAction }),
+          );
+        }
       } catch (e) {
         if (e.name === "AbortError") return;
         setMessages((m) => {
@@ -547,7 +689,17 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         }
       }
     },
-    [streaming, sessionId, langLabel, speak, isRejection, clearListeningTimer, navigate, confirmPendingAction],
+    [
+      streaming,
+      sessionId,
+      langLabel,
+      speak,
+      isRejection,
+      clearListeningTimer,
+      cancelSpeechOutput,
+      navigate,
+      confirmPendingAction,
+    ],
   );
   sendMessageRef.current = sendMessage;
 
@@ -559,7 +711,9 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
     [speak],
   );
 
-  // Setup SpeechRecognition (recreate when locale changes)
+  // Setup SpeechRecognition once per locale. Some Chromium implementations end
+  // a recognition session after a brief silence; keep the session alive while
+  // Era is awaiting a reply instead of leaving the customer stranded.
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
@@ -577,21 +731,60 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
       if (recognitionSuppressedRef.current) return;
       clearListeningTimer();
       const text = e.results[0][0].transcript;
+      shouldKeepListeningRef.current = false;
       setInput(text);
       setListening(false);
       if (confirmPendingActionRef.current?.(text, true)) return;
-      setTimeout(() => sendMessage(text), 200);
+      setTimeout(() => sendMessageRef.current?.(text), 200);
     };
-    rec.onend = () => setListening(false);
+    rec.onend = () => {
+      setListening(false);
+      if (
+        !shouldKeepListeningRef.current ||
+        recognitionSuppressedRef.current ||
+        streamingRef.current
+      ) {
+        return;
+      }
+      // Reopen after Chromium closes a no-speech session. The existing
+      // five-second timer remains active, so Era still asks again if nobody replies.
+      setTimeout(() => {
+        if (
+          recognitionRef.current !== rec ||
+          !shouldKeepListeningRef.current ||
+          recognitionSuppressedRef.current ||
+          streamingRef.current
+        ) {
+          return;
+        }
+        try {
+          rec.lang = locale;
+          rec.start();
+          setListening(true);
+        } catch (_) {
+          // A replacement recognition session may already be starting.
+        }
+      }, 180);
+    };
     rec.onerror = () => {
       setListening(false);
     };
     recognitionRef.current = rec;
-  }, [locale, sendMessage, clearListeningTimer]);
+    return () => {
+      if (recognitionRef.current === rec) recognitionRef.current = null;
+      shouldKeepListeningRef.current = false;
+      try {
+        rec.abort();
+      } catch (_) {
+        // Recognition may already have ended.
+      }
+    };
+  }, [locale, clearListeningTimer]);
 
   // Unlock browser speech output on the first user interaction.
   useEffect(() => {
     const unlockSpeech = () => {
+      primeAudio();
       if (!window.speechSynthesis) return;
       const utterance = new SpeechSynthesisUtterance(" ");
       utterance.volume = 0;
@@ -603,24 +796,27 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
       window.removeEventListener("pointerdown", unlockSpeech);
       window.removeEventListener("keydown", unlockSpeech);
     };
-  }, []);
+  }, [primeAudio]);
 
   const toggleListen = useCallback(() => {
     if (!recognitionRef.current) return;
     if (listening) {
       clearListeningTimer();
+      shouldKeepListeningRef.current = false;
       recognitionRef.current.stop();
       setListening(false);
     } else {
       try {
-        window.speechSynthesis?.cancel();
+        cancelSpeechOutput();
         recognitionSuppressedRef.current = false;
+        shouldKeepListeningRef.current = true;
         recognitionRef.current.lang = locale;
         recognitionRef.current.start();
         setListening(true);
         clearListeningTimer();
         listeningTimerRef.current = setTimeout(() => {
           recognitionSuppressedRef.current = true;
+          shouldKeepListeningRef.current = false;
           try {
             recognitionRef.current?.abort();
           } catch (_) {
@@ -635,7 +831,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         setListening(false);
       }
     }
-  }, [listening, locale, clearListeningTimer]);
+  }, [listening, locale, clearListeningTimer, cancelSpeechOutput]);
 
   // Global helpers
   useEffect(() => {
@@ -669,6 +865,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
       pendingActionRef.current = null;
       clearListeningTimer();
       recognitionSuppressedRef.current = true;
+      shouldKeepListeningRef.current = false;
       try {
         recognitionRef.current?.abort();
       } catch (_) {
@@ -676,7 +873,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
       }
       activeRequestRef.current?.abort();
       activeRequestRef.current = null;
-      window.speechSynthesis?.cancel();
+      cancelSpeechOutput();
       setListening(false);
       setSpeaking(false);
       setStreaming(false);
@@ -687,7 +884,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
       delete window.eraGuideQuestion;
       delete window.eraMoveOn;
     };
-  }, [sendMessage, greetLocal, clearListeningTimer]);
+  }, [sendMessage, greetLocal, clearListeningTimer, cancelSpeechOutput]);
 
   const value = {
     messages,

@@ -113,19 +113,36 @@ body {
   transform: translateX(-50%);
   will-change: transform;
 }
-.era-character .era-character-img-face {
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 34%, transparent 46%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 34%, transparent 46%);
-  z-index: 2;
-}
-.era-character .era-character-img-gesture {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 34%, #000 46%, #000 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, transparent 34%, #000 46%, #000 100%);
+.era-character .era-character-img-base {
   z-index: 1;
-  will-change: opacity;
 }
-.era-character .era-character-img-gesture-speaking {
-  opacity: 0;
+.era-character .era-character-img-mouth {
+  z-index: 2;
+  clip-path: ellipse(10% 3.1% at 50% 20.65%);
+  transform-origin: 50% 20.65%;
+  transform:
+    translateX(-50%)
+    translateY(calc(var(--era-audio-level, 0) * 1.2px))
+    scaleY(calc(1 + (var(--era-audio-level, 0) * 0.09)));
+  transition: transform 55ms linear;
+  will-change: transform;
+}
+.era-voice-preparing {
+  position: absolute;
+  z-index: 20;
+  bottom: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  background: rgba(10, 37, 64, 0.76);
+  color: white;
+  font-size: clamp(7px, 4%, 10px);
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
 }
 @keyframes era-breathe {
   0%, 100% { transform: translateY(0) scale(1); }
@@ -151,31 +168,15 @@ body {
   pointer-events: none;
 }
 .era-character[data-speaking="true"] .era-character-figure {
-  animation: era-human-talk 3.6s infinite cubic-bezier(.45, 0, .55, 1);
-}
-.era-character[data-speaking="true"] .era-character-img-gesture-idle {
-  animation: era-gesture-idle 4.8s infinite ease-in-out;
-}
-.era-character[data-speaking="true"] .era-character-img-gesture-speaking {
-  animation: era-gesture-speaking 4.8s infinite ease-in-out;
+  animation: era-human-talk 4.8s infinite cubic-bezier(.45, 0, .55, 1);
 }
 @keyframes era-human-talk {
   0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-  16%      { transform: translateY(-2px) rotate(-0.45deg) scale(1.004); }
-  34%      { transform: translateY(-4px) rotate(0.35deg) scale(1.008); }
-  52%      { transform: translateY(-1px) rotate(0.55deg) scale(1.003); }
-  70%      { transform: translateY(-4px) rotate(-0.25deg) scale(1.007); }
-  86%      { transform: translateY(-2px) rotate(0.2deg) scale(1.004); }
-}
-@keyframes era-gesture-idle {
-  0%, 18%  { opacity: 1; }
-  32%, 58% { opacity: 0; }
-  72%, 100% { opacity: 1; }
-}
-@keyframes era-gesture-speaking {
-  0%, 18%  { opacity: 0; }
-  32%, 58% { opacity: 1; }
-  72%, 100% { opacity: 0; }
+  15%      { transform: translateY(-1px) rotate(-0.22deg) scale(1.003); }
+  32%      { transform: translateY(-3px) rotate(0.28deg) scale(1.006); }
+  51%      { transform: translateY(-1px) rotate(0.18deg) scale(1.002); }
+  69%      { transform: translateY(-3px) rotate(-0.2deg) scale(1.006); }
+  86%      { transform: translateY(-1px) rotate(0.12deg) scale(1.003); }
 }
 .era-character .era-listen-svg {
   position: absolute;
@@ -238,13 +239,22 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .era-character,
+  .era-character *,
+  .era-waves span {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 /* Section callout animation — small pop when route changes */
 .era-callout {
   animation: era-callout-in 0.55s cubic-bezier(.2, 1.4, .5, 1) both;
 }
 @keyframes era-callout-in {
-  0% { opacity: 0; transform: translateX(120%) scale(0.7); }
-  100% { opacity: 1; transform: translateX(100%) scale(1); }
+  0% { opacity: 0; transform: translateY(-8px) scale(0.92); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .era-callout-arrow {
   animation: era-arrow-nudge 1.6s ease-in-out infinite;

@@ -27,6 +27,8 @@ export const fetchRecommendationProfile = (horizon, riskProfile) =>
       `/recommendations?horizon=${encodeURIComponent(horizon)}&risk_profile=${encodeURIComponent(riskProfile)}`,
     )
     .then((r) => r.data);
+export const fetchCurrentRecommendation = () =>
+  http.get("/recommendations/current").then((r) => r.data);
 export const fetchQuestions = () => http.get("/questionnaire/questions").then((r) => r.data);
 export const submitQuestionnaire = (payload) =>
   http.post("/questionnaire/submit", payload).then((r) => r.data);

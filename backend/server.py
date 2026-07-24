@@ -10,6 +10,7 @@ import logging
 import re
 import asyncio
 import httpx
+import base64
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
@@ -28,6 +29,8 @@ db = client[os.environ["DB_NAME"]]
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.6-sol")
 openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+ERA_TTS_MODEL = os.environ.get("ERA_TTS_MODEL", "gpt-4o-mini-tts")
+ERA_TTS_VOICE = os.environ.get("ERA_TTS_VOICE", "marin")
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -120,6 +123,10 @@ class ContextualOrder(BaseModel):
     quantity: int = Field(gt=0)
 
 
+class EraSpeechRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=4096)
+
+
 class ContextualInsightRequest(BaseModel):
     customerProfile: ContextualCustomerProfile
     order: ContextualOrder
@@ -145,7 +152,11 @@ class EraTurn(BaseModel):
         default=None,
         ge=1,
         le=4,
-        description="Select an option only when the user's answer clearly supports it."
+        description=(
+            "The value of the matching visible option. Set this both for a clear answer "
+            "and for a likely interpretation that needs the customer's confirmation; the "
+            "client keeps it pending until the customer affirms it."
+        )
     )
     selected_option_label: Optional[str] = Field(
         default=None,
@@ -156,7 +167,9 @@ class EraTurn(BaseModel):
 
 # ---------- File-backed portfolio state ----------
 HOLDINGS_FILE = ROOT_DIR / "holdings.json"
+CURRENT_RECOMMENDATION_FILE = ROOT_DIR / "current_recommendation.json"
 holdings_lock = asyncio.Lock()
+recommendation_lock = asyncio.Lock()
 
 
 def load_holdings() -> List[Holding]:
@@ -175,6 +188,26 @@ def save_holdings(holdings: List[Holding]) -> None:
         )
         holdings_file.write("\n")
     os.replace(temporary_file, HOLDINGS_FILE)
+
+
+def load_current_recommendation() -> Optional[dict]:
+    if not CURRENT_RECOMMENDATION_FILE.exists():
+        return None
+    with open(CURRENT_RECOMMENDATION_FILE, encoding="utf-8") as recommendation_file:
+        return json.load(recommendation_file)
+
+
+def save_current_recommendation(result: QuestionnaireResult, session_id: str) -> None:
+    temporary_file = CURRENT_RECOMMENDATION_FILE.with_suffix(".json.tmp")
+    payload = {
+        "session_id": session_id,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        **result.model_dump(),
+    }
+    with open(temporary_file, "w", encoding="utf-8") as recommendation_file:
+        json.dump(payload, recommendation_file, indent=2, ensure_ascii=False)
+        recommendation_file.write("\n")
+    os.replace(temporary_file, CURRENT_RECOMMENDATION_FILE)
 
 PRODUCTS: List[Product] = [
     # Stocks (European blue chips)
@@ -336,6 +369,66 @@ async def root():
     return {"message": "Investment Portfolio API"}
 
 
+@api_router.get("/era/voice/status")
+async def era_voice_status():
+    """Tell the frontend whether high-quality OpenAI speech is available."""
+    return {
+        "configured": bool(OPENAI_API_KEY),
+        "provider": "openai",
+        "model": ERA_TTS_MODEL,
+    }
+
+
+@api_router.post("/era/voice/speech")
+async def create_era_speech(req: EraSpeechRequest):
+    """Generate raw 24 kHz PCM for Era's local audio-reactive animation."""
+    if not OPENAI_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="OpenAI speech is not configured. Add OPENAI_API_KEY.",
+        )
+
+    spoken_text = (
+        req.text.replace("ERA", "Era")
+        .replace("*", "")
+        .replace("_", "")
+        .replace("#", "")
+        .replace("`", "")
+        .strip()
+    )
+    try:
+        async with httpx.AsyncClient(timeout=60) as http_client:
+            response = await http_client.post(
+                "https://api.openai.com/v1/audio/speech",
+                headers={
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": ERA_TTS_MODEL,
+                    "voice": ERA_TTS_VOICE,
+                    "input": spoken_text,
+                    "instructions": (
+                        "Speak as a warm, polished female European relationship manager. "
+                        "Sound natural, attentive, and conversational. Pronounce Era as "
+                        "'Eer-ah'. Use measured pacing and subtle, reassuring expression."
+                    ),
+                    "response_format": "pcm",
+                },
+            )
+        response.raise_for_status()
+        return {"audio": base64.b64encode(response.content).decode("ascii")}
+    except httpx.HTTPStatusError as exc:
+        logger.exception("OpenAI text-to-speech request failed")
+        raise HTTPException(
+            status_code=exc.response.status_code,
+            detail="Era's natural speech could not be generated.",
+        ) from exc
+    except Exception as exc:
+        logger.exception("Era speech generation failed")
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @api_router.get("/portfolio", response_model=PortfolioSummary)
 async def get_portfolio():
     return compute_portfolio_summary()
@@ -406,6 +499,17 @@ async def get_recommendations(
     )
 
 
+@api_router.get("/recommendations/current")
+async def get_current_recommendation():
+    recommendation = load_current_recommendation()
+    if recommendation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Complete Financial Objectives to receive ranked product recommendations.",
+        )
+    return recommendation
+
+
 @api_router.get("/questionnaire/questions")
 async def get_questions():
     return {"questions": QUESTIONS}
@@ -414,15 +518,18 @@ async def get_questions():
 @api_router.post("/questionnaire/submit", response_model=QuestionnaireResult)
 async def submit_questionnaire(sub: QuestionnaireSubmission):
     result = compute_questionnaire(sub.answers)
+    session_id = sub.session_id or str(uuid.uuid4())
     # Save to db
     doc = {
         "id": str(uuid.uuid4()),
-        "session_id": sub.session_id or str(uuid.uuid4()),
+        "session_id": session_id,
         "answers": [a.model_dump() for a in sub.answers],
         "result": result.model_dump(),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     await db.questionnaire_submissions.insert_one(doc)
+    async with recommendation_lock:
+        save_current_recommendation(result, session_id)
     return result
 
 
@@ -489,7 +596,10 @@ async def chat_stream(req: ChatRequest):
         "If they ask what the proposal or question means, explain it briefly in plain language, then ask again whether "
         "you should select the pending choice and continue. Keep returning that same proposed option unless the customer "
         "clearly changes their underlying answer. "
-        "If their answer is ambiguous, do not guess; ask one short follow-up question and leave the selection empty. "
+        "If their answer is close to one available option but could be a transcription error or needs confirmation, "
+        "set selected_option_value to that likely option and ask one short confirmation question, for example, "
+        "'Did you mean that your goal is to generate steady income?' This lets the app retain the proposed choice "
+        "while it waits for yes or no. Only leave the selection empty when no available option is a reasonable match. "
         "Only the app applies the proposal after the customer confirms it. "
         "Never invent an option, never select a value outside the supplied choices, never guarantee returns, "
         "and do not provide regulated personalized financial advice. Use EUR and European-investor context where relevant. "
@@ -518,12 +628,25 @@ async def chat_stream(req: ChatRequest):
             def normalize_choice(value):
                 return re.sub(r"[^a-z0-9]+", " ", str(value).lower()).strip()
 
+            def is_direct_option_response(message, option_label):
+                normalized_message = normalize_choice(message)
+                normalized_label = normalize_choice(option_label)
+                without_lead_in = re.sub(
+                    r"^(?:i want to|i want|my goal is|i would like to|i would like|please select|select|choose|go with|i prefer)\s+",
+                    "",
+                    normalized_message,
+                )
+                without_politeness = re.sub(
+                    r"\s+(?:please|thanks|thank you)$", "", without_lead_in
+                ).strip()
+                return without_politeness == normalized_label
+
             exact_option = next(
                 (
                     option
                     for option in allowed_options
                     if isinstance(option, dict)
-                    and normalize_choice(option.get("label", "")) == normalize_choice(req.message)
+                    and is_direct_option_response(req.message, option.get("label", ""))
                 ),
                 None,
             )

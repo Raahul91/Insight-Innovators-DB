@@ -79,5 +79,14 @@
     "avg_cost": 1620.0,
     "current_price": 3120.0,
     "day_change_pct": 1.78
+  },
+  {
+    "ticker": "PR13.DE",
+    "name": "Amundi Euro Government Bond 1-3Y",
+    "category": "Bonds",
+    "shares": 5.0,
+    "avg_cost": 52.1,
+    "current_price": 52.1,
+    "day_change_pct": 0.0
   }
 ]

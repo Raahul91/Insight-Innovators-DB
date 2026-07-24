@@ -1,17 +1,23 @@
 import React from "react";
 import eraIdle from "../assets/era-human-v2.png";
-import eraSpeaking from "../assets/era-human-speaking-v2.png";
+import { useEraVoice } from "./EraVoiceContext";
 
 /**
- * ERA — a human advisor with a permanently stable face layer and two matched
- * lower-body gesture layers. Only the shoulders, arms, and hands transition
- * while speaking, preventing identity flicker.
+ * Era uses one stable source portrait. OpenAI speech energy drives a small
+ * masked jaw region and natural whole-body micro-motion without swapping faces.
  */
 export const ERAAvatar = ({ size = 440, speaking = false, listening = false, className = "" }) => {
+  const { audioLevel, preparing } = useEraVoice();
+  const reactiveLevel = speaking ? Math.max(0.08, audioLevel) : 0;
+
   return (
     <div
       className={`era-character ${className}`}
-      style={{ width: size, height: size }}
+      style={{
+        width: size,
+        height: size,
+        "--era-audio-level": reactiveLevel.toFixed(3),
+      }}
       data-speaking={speaking ? "true" : "false"}
       data-listening={listening ? "true" : "false"}
       aria-label="ERA — European Relationship Assistant"
@@ -30,23 +36,21 @@ export const ERAAvatar = ({ size = 440, speaking = false, listening = false, cla
           src={eraIdle}
           alt="ERA"
           draggable={false}
-          className="era-character-img era-character-img-face"
+          className="era-character-img era-character-img-base"
         />
         <img
           src={eraIdle}
           alt=""
           aria-hidden
           draggable={false}
-          className="era-character-img era-character-img-gesture era-character-img-gesture-idle"
-        />
-        <img
-          src={eraSpeaking}
-          alt=""
-          aria-hidden
-          draggable={false}
-          className="era-character-img era-character-img-gesture era-character-img-gesture-speaking"
+          className="era-character-img era-character-img-mouth"
         />
       </div>
+      {preparing && (
+        <span className="era-voice-preparing" aria-label="Preparing Era's voice">
+          Preparing voice…
+        </span>
+      )}
     </div>
   );
 };
