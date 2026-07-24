@@ -845,21 +845,17 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
     };
     window.eraGuideQuestion = (questionnaireContext, isFirstQuestion = false) => {
       setFloatingOpen(true);
-      if (isFirstQuestion) {
-        // The Objectives greeting already introduces Era. Replace the generic
-        // panel welcome instead of showing two near-identical introductions.
-        setMessages([]);
-      }
-      const options = questionnaireContext.options
-        .map((option) => `${option.value}. ${option.label}`)
-        .join("\n");
+      // Questions and choices are deterministic. Ask them locally so the
+      // customer is not delayed by a round trip to the LLM on every step.
       const prompt = isFirstQuestion
-        ? `Introduce yourself warmly as Era, the customer's Relationship Manager. Say that you are here to understand their needs and help them make choices that fit their financial goals. Then ask the current question naturally. Do not mention proposing, matching, selecting, or changing anything on screen.\n\nAvailable choices:\n${options}`
-        : `Ask the current on-screen question naturally and invite the customer to answer in their own words.\n\nAvailable choices:\n${options}`;
-      setTimeout(
-        () => sendMessage(prompt, { displayUser: false, questionnaireContext }),
-        200,
+        ? `Hello, I’m Era, your Relationship Manager. I’m here to understand your needs and help you make choices that fit your financial goals. ${questionnaireContext.question}`
+        : `${questionnaireContext.question} Feel free to answer in your own words.`;
+      setMessages((messages) =>
+        isFirstQuestion
+          ? [{ role: "assistant", content: prompt }]
+          : [...messages, { role: "assistant", content: prompt }],
       );
+      setTimeout(() => speak(prompt), 150);
     };
     window.eraMoveOn = () => {
       pendingActionRef.current = null;
@@ -884,7 +880,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
       delete window.eraGuideQuestion;
       delete window.eraMoveOn;
     };
-  }, [sendMessage, greetLocal, clearListeningTimer, cancelSpeechOutput]);
+  }, [sendMessage, greetLocal, speak, clearListeningTimer, cancelSpeechOutput]);
 
   const value = {
     messages,
