@@ -16,45 +16,9 @@ const getSessionId = () => {
 
 const ERAContext = createContext(null);
 
-const FEMININE_VOICE_NAMES = {
-  en: ["samantha", "ava", "allison", "susan", "zoe", "victoria", "karen", "aria", "jenny", "zira", "hazel", "female"],
-  de: ["anna", "petra", "vicki", "marlene", "katja", "female"],
-  fr: ["amelie", "audrey", "marie", "virginie", "hortense", "female"],
-  es: ["monica", "paulina", "marisol", "helena", "laura", "female"],
-  it: ["alice", "federica", "elsa", "female"],
-};
-
-const MASCULINE_VOICE_NAMES = [
-  "alex", "daniel", "fred", "ralph", "thomas", "jorge", "diego", "luca", "male",
-];
-
-const selectBestVoice = (voices, locale) => {
-  const language = locale.toLowerCase().split("-")[0];
-  const preferredNames = FEMININE_VOICE_NAMES[language] || FEMININE_VOICE_NAMES.en;
-
-  return voices
-    .filter((voice) => voice.lang?.toLowerCase().startsWith(language))
-    .map((voice) => {
-      const name = voice.name.toLowerCase();
-      let score = 0;
-      if (voice.lang.toLowerCase() === locale.toLowerCase()) score += 40;
-      if (voice.localService) score += 12;
-      if (voice.default) score += 4;
-
-      const preferredIndex = preferredNames.findIndex((candidate) => name.includes(candidate));
-      if (preferredIndex >= 0) score += 100 - preferredIndex * 4;
-      if (/(premium|enhanced|natural|neural|siri)/i.test(name)) score += 35;
-      if (MASCULINE_VOICE_NAMES.some((candidate) => name.includes(candidate))) score -= 80;
-
-      return { voice, score };
-    })
-    .sort((a, b) => b.score - a.score)[0]?.voice;
-};
-
 export const ERAProvider = ({ children, portfolioContext = null }) => {
   const { code: langCode, label: langLabel, locale, t } = useLanguage();
   const {
-    configured: openAIVoiceConfigured,
     playText: playOpenAIVoice,
     primeAudio,
     stop: stopOpenAIVoice,
@@ -76,6 +40,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
   const speakRef = useRef(null);
   const pendingActionRef = useRef(null);
   const queuedInputRef = useRef(null);
+  const speechSequenceRef = useRef(0);
   const sendMessageRef = useRef(null);
   const confirmPendingActionRef = useRef(null);
   const streamingRef = useRef(false);
@@ -93,6 +58,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
   }, []);
 
   const cancelSpeechOutput = useCallback(() => {
+    speechSequenceRef.current += 1;
     window.speechSynthesis?.cancel();
     stopOpenAIVoice();
   }, [stopOpenAIVoice]);
@@ -203,6 +169,7 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         .replace(/\bERA\b/g, "Era")
         .replace(/\s+/g, " ")
         .trim();
+      const speechSequence = ++speechSequenceRef.current;
 
       const finishSpeaking = () => {
         setSpeaking(false);
@@ -242,73 +209,25 @@ export const ERAProvider = ({ children, portfolioContext = null }) => {
         }, 450);
       };
 
-      const speakWithBrowserVoice = () => {
-        if (!window.speechSynthesis) {
-          finishSpeaking();
-          return;
-        }
-        const utter = new SpeechSynthesisUtterance(spokenText);
-        utter.lang = locale;
-        const match = selectBestVoice(window.speechSynthesis.getVoices(), locale);
-        if (match) utter.voice = match;
-        utter.rate = 0.94;
-        utter.pitch = 1.06;
-        utter.volume = 1;
-        utter.onstart = () => setSpeaking(true);
-        utter.onend = finishSpeaking;
-        utter.onerror = () => {
-          recognitionSuppressedRef.current = false;
-          setSpeaking(false);
-        };
-        window.speechSynthesis.speak(utter);
-      };
-
-      const speakWithAvailableBrowserVoice = () => {
-        if (window.speechSynthesis?.getVoices().length) {
-          speakWithBrowserVoice();
-          return;
-        }
-        // Chromium may populate system voices asynchronously on the first request.
-        let hasSpoken = false;
-        const speakOnce = () => {
-          if (hasSpoken) return;
-          hasSpoken = true;
-          speakWithBrowserVoice();
-        };
-        const handleVoicesChanged = () => {
-          window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
-          speakOnce();
-        };
-        window.speechSynthesis?.addEventListener("voiceschanged", handleVoicesChanged, { once: true });
-        setTimeout(() => {
-          window.speechSynthesis?.removeEventListener("voiceschanged", handleVoicesChanged);
-          speakOnce();
-        }, 500);
-      };
-
-      if (openAIVoiceConfigured !== false) {
-        let openAIVoiceStarted = false;
-        playOpenAIVoice(spokenText, {
-          onStart: () => {
-            openAIVoiceStarted = true;
-            setSpeaking(true);
-          },
+      playOpenAIVoice(spokenText, {
+        onStart: () => setSpeaking(true),
+      })
+        .then(() => {
+          if (speechSequence === speechSequenceRef.current) finishSpeaking();
         })
-          .then(finishSpeaking)
-          .catch(() => {
-            setSpeaking(false);
-            if (!openAIVoiceStarted) speakWithAvailableBrowserVoice();
-          });
-        return;
-      }
-      speakWithAvailableBrowserVoice();
+        .catch(() => {
+          // Do not fall back to an operating-system voice. A stale request can
+          // reject when a new sentence starts, so only complete the active one.
+          if (speechSequence !== speechSequenceRef.current) return;
+          setSpeaking(false);
+          finishSpeaking();
+        });
     },
     [
       voiceEnabled,
       locale,
       clearListeningTimer,
       cancelSpeechOutput,
-      openAIVoiceConfigured,
       playOpenAIVoice,
     ],
   );
