@@ -22,6 +22,7 @@ export default function Objectives() {
   const [eraConfirmedQuestion, setEraConfirmedQuestion] = useState(null);
   const [greetedResult, setGreetedResult] = useState(false);
   const startedWithEra = useRef(false);
+  const resultSummaryRef = useRef(null);
   const currentQ = questions[step];
   const total = questions.length;
   const progress = total ? ((step + (result ? 1 : 0)) / total) * 100 : 0;
@@ -136,7 +137,9 @@ export default function Objectives() {
         .join(", ");
       const prompt = `${t("era_result_summary_prompt")} Explain this as a final concise summary. Do not ask the customer a question or expect another answer.\n\nAssessment result:\n- Horizon: ${result.horizon}\n- Risk profile: ${result.risk_profile}\n- Score: ${result.total_score}/20\n- Suggested allocation: ${alloc}`;
       window.eraMoveOn?.();
-      setTimeout(() => window.askERA(prompt, { displayUser: false, expectResponse: false }), 700);
+      resultSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Let the result panel arrive on screen before Era begins the spoken summary.
+      setTimeout(() => window.askERA(prompt, { displayUser: false, expectResponse: false }), 900);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
@@ -211,7 +214,10 @@ export default function Objectives() {
                 </span>
               )}
             </div>
-            <h2 className="font-display font-black text-3xl md:text-4xl text-[var(--primary)] mb-2">
+            <h2
+              ref={resultSummaryRef}
+              className="scroll-mt-6 font-display font-black text-3xl md:text-4xl text-[var(--primary)] mb-2"
+            >
               Your recommended horizon
             </h2>
             <div
